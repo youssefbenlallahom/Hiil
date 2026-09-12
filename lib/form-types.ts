@@ -1,0 +1,23 @@
+export type FormField = {
+  key: string;
+  label: string;
+  arabic: string;
+  step: number;
+  required: boolean;
+  max_length: number;
+  help: string;
+  where: string;
+  example: string;
+  tip: string;
+  source: string;
+  input_type: string;
+  why?: string;
+  how?: string;
+  pitfalls?: string;
+  law_ref?: string;
+  badge?: string;
+};
+export type Modification = {key:string;label:string;arabic:string;help:string;group:string;source:string};
+export type FormCatalog = {version:string;checked_at:string;fields:FormField[];modifications:Modification[];guidance:Record<string,string>;sources:Record<string,{title:string;url:string;detail:string}>};
+export type OcrBatch = {id:string;name:string;kind:string;mime:string;method:string;candidates:{key:string;value:string;evidence:string;page:number}[];pages:{page:number;text:string}[]};
+export type FormDraft = {revision:number;fields:Record<string,string>;modifications:string[];same_person:boolean;step:number;generated_revision:number|null;imports:OcrBatch[];errors:Record<string,string>;ready:boolean;has_pdf:boolean};

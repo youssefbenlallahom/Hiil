@@ -18,7 +18,24 @@ def connect():
     DATA.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DATA / 'dossier.sqlite')
     conn.execute('CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, payload TEXT NOT NULL)')
+    conn.execute('CREATE TABLE IF NOT EXISTS conversations (case_id TEXT PRIMARY KEY, payload TEXT NOT NULL)')
     return conn
+
+
+def load_conversation(case_id):
+    with connect() as db:
+        row = db.execute('SELECT payload FROM conversations WHERE case_id = ?', (case_id,)).fetchone()
+    return json.loads(row[0]) if row else None
+
+
+def save_conversation(case_id, state):
+    with LOCK, connect() as db:
+        db.execute('INSERT OR REPLACE INTO conversations VALUES (?, ?)', (case_id, json.dumps(state, ensure_ascii=False)))
+
+
+def delete_conversation(case_id):
+    with LOCK, connect() as db:
+        db.execute('DELETE FROM conversations WHERE case_id = ?', (case_id,))
 
 def save(case):
     with connect() as db:

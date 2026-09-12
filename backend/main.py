@@ -13,9 +13,11 @@ from fastapi.responses import FileResponse, Response
 import os
 
 from backend import ai, config, store
-from backend.models import Confirmation, NewCase, Question, Review
+from backend.models import Confirmation, NewCase, Question, Review, ConversationMessage, ConversationResponse
+from backend.flow import conversation_turn, process_cin_upload, get_session, clear_session, conversation_lock, generate_form
 from backend.rules import can_submit, checks
 from backend.sources import SOURCES
+from backend.form_routes import router as form_router
 
 @asynccontextmanager
 async def lifespan(app):
@@ -23,6 +25,7 @@ async def lifespan(app):
     yield
 
 app = FastAPI(title='Dossier TN', lifespan=lifespan)
+app.include_router(form_router)
 app.add_middleware(CORSMiddleware, allow_origins=os.getenv('DOSSIER_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(','), allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 MODEL_SLOTS = asyncio.Semaphore(2)
 
@@ -215,3 +218,60 @@ def export(case_id: str):
             else:
                 archive.writestr(f'pieces/{i + 1:02d}-demonstration.txt', doc['text'])
     return Response(output.getvalue(), media_type='application/zip', headers={'Content-Disposition': f'attachment; filename="{case_id}.zip"'})
+
+@app.get('/api/cases/{case_id}/conversation', response_model=ConversationResponse)
+async def get_case_conversation(case_id: str):
+    required(case_id)
+    return await conversation_turn(case_id, '')
+
+@app.post('/api/cases/{case_id}/conversation', response_model=ConversationResponse)
+async def post_case_conversation(case_id: str, body: ConversationMessage):
+    required(case_id)
+    async with MODEL_SLOTS:
+        return await conversation_turn(case_id, body.message)
+
+@app.post('/api/cases/{case_id}/conversation/cin', response_model=ConversationResponse)
+async def upload_case_conversation_cin(case_id: str, file: UploadFile = File(...)):
+    required(case_id)
+    content = await file.read(12 * 1024 * 1024 + 1)
+    if not content or len(content) > 12 * 1024 * 1024:
+        raise HTTPException(413, 'Ajoutez un document ou une photo de moins de 12 Mo.')
+    name = Path((file.filename or 'cin.jpg').replace('\\', '/')).name
+    if content.startswith(b'%PDF-'):
+        mime = 'application/pdf'
+    elif content.startswith(b'\x89PNG\r\n\x1a\n'):
+        mime = 'image/png'
+    elif content.startswith(b'\xff\xd8\xff'):
+        mime = 'image/jpeg'
+    elif content.startswith(b'RIFF') and b'WEBP' in content[:16]:
+        mime = 'image/webp'
+    else:
+        mime = file.content_type or 'image/jpeg'
+    async with MODEL_SLOTS:
+        return await process_cin_upload(case_id, name, content, mime)
+
+@app.post('/api/cases/{case_id}/conversation/reset')
+async def reset_conversation(case_id: str):
+    required(case_id)
+    async with conversation_lock(case_id):
+        clear_session(case_id)
+    return {'status': 'reset'}
+
+@app.post('/api/cases/{case_id}/form/fill', response_model=ConversationResponse)
+async def fill_case_form(case_id: str):
+    required(case_id)
+    try:
+        return await generate_form(case_id)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from None
+    except Exception:
+        raise HTTPException(500, 'La génération du PDF a échoué. Les informations saisies sont conservées.') from None
+
+@app.get('/api/cases/{case_id}/form')
+def download_form(case_id: str):
+    required(case_id)
+    state = get_session(case_id)
+    pdf_path = Path(state.form_path) if state.form_path else None
+    if not pdf_path or not pdf_path.is_file():
+        raise HTTPException(404, 'Formulaire non encore généré.')
+    return FileResponse(str(pdf_path), media_type='application/pdf', filename=f'{case_id}_RNE_F005.pdf')

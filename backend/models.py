@@ -28,3 +28,19 @@ class Review(BaseModel):
 
 class Question(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
+
+class ConversationMessage(BaseModel):
+    message: str = Field(min_length=1, max_length=2000)
+    session_id: str | None = Field(default=None, max_length=100)
+
+class ConversationResponse(BaseModel):
+    reply: str
+    status: str
+    collected: dict[str, str] = Field(default_factory=dict)
+    progress: dict = Field(default_factory=dict)
+    justifications: list[dict] = Field(default_factory=list)
+    form_path: str | None = None
+    history: list[dict[str, str]] = Field(default_factory=list)
+    mode: Literal['llm', 'guided', 'unavailable'] = 'guided'
+    error_code: str | None = None
+    can_generate: bool = False

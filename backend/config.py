@@ -15,3 +15,6 @@ OCR_KEY = os.getenv('AZURE_DOCUMENT_INTELLIGENCE_KEY', '').strip()
 
 def azure_ready():
     return bool(BASE_URL and API_KEY and DEPLOYMENT)
+
+CREWAI_MODEL = os.getenv('CREWAI_MODEL', '').strip()
+

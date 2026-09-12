@@ -1,9 +1,10 @@
 'use client';
 
 import {useEffect,useRef,useState} from 'react';
+import FormWizard from '@/components/form-wizard';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
-import {ArrowDownToLine,ArrowRight,ArrowUpRight,BookOpen,Building2,Check,CheckCheck,ChevronDown,ChevronRight,CircleAlert,Clock3,FileCheck2,FileText,FolderOpen,House,Inbox,LoaderCircle,Menu,MessageCircle,Plus,Search,Send,ShieldCheck,Sparkles,UploadCloud,X} from 'lucide-react';
+import {ArrowDownToLine,ArrowRight,ArrowUpRight,BookOpen,Building2,Camera,Check,CheckCheck,ChevronDown,ChevronRight,CircleAlert,Clock3,FileCheck2,FileText,FolderOpen,House,Inbox,LoaderCircle,Menu,MessageCircle,PenLine,Plus,RotateCcw,Search,Send,ShieldCheck,Sparkles,UploadCloud,X} from 'lucide-react';
 import {api,Case,Document,Health,Issue,Source} from '@/lib/types';
 
 const statusNames:Record<string,string>={draft:'À compléter',submitted:'À examiner',correction_requested:'Correction demandée',reviewed:'Revue terminée'};
@@ -27,7 +28,8 @@ export default function Workspace(){
   const current=cases.find(c=>c.id===(pathId||selected))||cases[0];
   const agency=pathname==='/agence'; const verification=pathname.endsWith('/verification'); const preparation=pathname.endsWith('/preparation');
   const documents=pathname==='/documents'||pathname.endsWith('/documents'); const companyPage=pathname==='/entreprise'; const sourcePage=pathname==='/sources'; const list=pathname==='/dossiers';
-  const home=!agency&&!verification&&!preparation&&!documents&&!companyPage&&!sourcePage&&!list;
+  const conversation=pathname.endsWith('/conversation')||pathname.endsWith('/formulaire');
+  const home=!agency&&!verification&&!preparation&&!documents&&!companyPage&&!sourcePage&&!list&&!conversation;
   async function refresh(){const [cs,h,s]=await Promise.all([api<Case[]>('/cases'),api<Health>('/health'),api<Source[]>('/sources')]);setCases(cs);setHealth(h);setSources(s);}
   useEffect(()=>{let active=true;Promise.all([api<Case[]>('/cases'),api<Health>('/health'),api<Source[]>('/sources')]).then(([cs,h,s])=>{if(active){setCases(cs);setHealth(h);setSources(s);}}).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});return()=>{active=false;};},[]);
   useEffect(()=>{setMobile(false);setError('');},[pathname]);
@@ -37,31 +39,50 @@ export default function Workspace(){
   const openPreview=(d:Document)=>{setPreview(d);previewDialog.current?.showModal();};
   async function upload(files:FileList|File[]|null){if(!files||!current)return;await action('upload',async()=>{for(const file of Array.from(files)){const data=new FormData();data.append('file',file);update(await api<Case>(`/cases/${current.id}/documents`,{method:'POST',body:data}));}setNotice('Documents enregistrés. Lancez leur analyse lorsque Azure est configuré.');});if(uploadInput.current)uploadInput.current.value='';}
   const locked=!!current&&['submitted','reviewed'].includes(current.status);
-  const nav=[{href:'/',label:'Vue d’ensemble',icon:House},{href:'/dossiers',label:'Mes dossiers',icon:FolderOpen},{href:'/documents',label:'Documents',icon:FileText},{href:'/entreprise',label:'Mon entreprise',icon:Building2}];
+  const nav=[{href:'/',label:'Vue d’ensemble',icon:House},{href:'/dossiers',label:'Mes démarches',icon:FolderOpen},{href:current?`/dossiers/${current.id}/formulaire`:'/dossiers',label:'Atelier RNE F005',icon:Sparkles},{href:'/documents',label:'Pièces & Justificatifs',icon:FileText},{href:'/entreprise',label:'Mon entreprise',icon:Building2}];
   const docList=(c:Case)=><div className="document-list">{c.documents.map(d=><div className="document-row" key={d.id}><button className="document-name" onClick={()=>openPreview(d)}><span className="file-icon"><FileText size={21}/></span><span><strong>{d.name}</strong><small>{d.sample?'Exemple fictif':d.content_type==='application/pdf'?'PDF':'Document'} · {d.pages.length} page{d.pages.length>1?'s':''}</small></span></button><div className="doc-actions">{d.status==='extracted'?<span className="mini-status"><Check size={13}/> {d.fields.length} champs</span>:<button className="btn small secondary" disabled={!!busy||locked} onClick={()=>action(d.id,async()=>{update(await api<Case>(`/cases/${c.id}/documents/${d.id}/analyze`,{method:'POST'}));setNotice('Analyse terminée. Vérifiez les champs extraits.');})}>{busy===d.id?<LoaderCircle size={14} className="spin"/>:<Sparkles size={14}/>}Analyser</button>}<button className="icon-btn" aria-label={'Ouvrir '+d.name} onClick={()=>openPreview(d)}><ArrowUpRight size={17}/></button></div></div>)}</div>;
+
+  if(conversation&&current)return <FormWizard key={current.id} c={current}/>;
 
   return <div className="app-shell">
     {mobile&&<button className="mobile-scrim" aria-label="Fermer le menu" onClick={()=>setMobile(false)}/>}
     <aside className={'sidebar '+(mobile?'open':'')}>
-      <Link href="/" className="brand"><span className="brand-icon"><FileText size={24}/></span><span>Dossier<span className="brand-tn">TN</span></span></Link>
-      <div className="workspace-label">VOTRE ESPACE</div>
-      <nav>{nav.map(({href,label,icon:Icon})=><Link key={href} href={href} className={'nav-item '+((href==='/'?home:pathname.startsWith(href))?'active':'')}><Icon size={19}/><span>{label}</span>{href==='/dossiers'&&<span className="nav-count">{cases.length}</span>}</Link>)}</nav>
+      <Link href="/" className="brand"><span className="brand-icon"><FileText size={22}/></span><span>Dossier<span className="brand-tn">TN</span></span></Link>
+      <div className="workspace-label">ESPACE CONFORMITÉ</div>
+      <nav>{nav.map(({href,label,icon:Icon})=><Link key={label} href={href} className={'nav-item '+((href==='/'?home:pathname.startsWith(href))?'active':'')}><Icon size={19}/><span>{label}</span>{href==='/dossiers'&&<span className="nav-count">{cases.length}</span>}</Link>)}</nav>
       <div className="sidebar-divider"/>
-      <Link href="/sources" className={'nav-item '+(sourcePage?'active':'')}><BookOpen size={19}/>Sources officielles<ArrowUpRight size={14} className="nav-arrow"/></Link>
-      <div className="sidebar-bottom"><div className="agency-switch"><ShieldCheck size={22}/><strong>De l’autre côté du dossier.</strong><p>Découvrez la revue des pièces par un agent.</p><Link href="/agence">Espace agent <ArrowRight size={15}/></Link></div><div className="profile"><span className="avatar">AT</span><div><strong>Votre espace de travail</strong><small>Prototype local</small></div></div></div>
+      <Link href="/sources" className={'nav-item '+(sourcePage?'active':'')}><BookOpen size={19}/>Sources RNE & DGI<ArrowUpRight size={14} className="nav-arrow"/></Link>
+      <div className="sidebar-bottom"><div className="agency-switch"><ShieldCheck size={22}/><strong>Espace Public & Guichet</strong><p>Simulez la revue et l’audit du dossier côté agent RNE / DGI.</p><Link href="/agence">Portail Agent <ArrowRight size={15}/></Link></div><div className="profile"><span className="avatar">TN</span><div><strong>Dossier Entreprise</strong><small>Conformité & Registre</small></div></div></div>
     </aside>
     <div className="app-body">
-      <header className="topbar"><div className="top-left"><button className="icon-btn mobile-toggle" aria-label="Ouvrir le menu" onClick={()=>setMobile(true)}><Menu size={22}/></button><span className="top-context">{agency?'Espace agent':'Espace entreprise'}</span><span className="top-divider">/</span><label className="company-select"><span className="sr-only">Entreprise sélectionnée</span><select value={current?.id||''} onChange={e=>{setSelected(e.target.value);if(pathId)router.push(`/dossiers/${e.target.value}/verification`);}}>{cases.map(c=><option key={c.id} value={c.id}>{c.company}</option>)}</select><ChevronDown size={14}/></label></div><div className="top-right"><span className={'mode-label '+(health?.ai_configured?'configured':'')}><span className="status-dot"/>{health?.ai_configured?'Azure configuré':'Mode démonstration'}</span><span className="avatar small">AT</span></div></header>
+      <header className="topbar"><div className="top-left"><button className="icon-btn mobile-toggle" aria-label="Ouvrir le menu" onClick={()=>setMobile(true)}><Menu size={22}/></button><span className="top-context">{agency?'Espace agent public':'Espace entreprise'}</span><span className="top-divider">/</span><label className="company-select"><span className="sr-only">Entreprise sélectionnée</span><select value={current?.id||''} onChange={e=>{setSelected(e.target.value);if(pathId)router.push(`/dossiers/${e.target.value}/verification`);}}>{cases.map(c=><option key={c.id} value={c.id}>{c.company}</option>)}</select><ChevronDown size={14}/></label></div><div className="top-right"><span className={'mode-label '+(health?.ai_configured?'configured':'')}><span className="status-dot"/>{health?.ai_configured?'Services IA connectés':'Mode démonstration'}</span><span className="avatar small">AT</span></div></header>
       <main id="main-content">
         {error&&<div className="error-banner" role="alert"><CircleAlert size={18}/><span>{error}</span><button className="icon-btn" aria-label="Fermer l’erreur" onClick={()=>setError('')}><X size={16}/></button></div>}
         {loading?<div className="loading-screen"><LoaderCircle className="spin" size={28}/><p>Ouverture de votre espace…</p></div>:!current?<Empty title="Votre espace est prêt" body="Créez votre premier dossier pour commencer."/>:<>
-        {home&&<><div className="page-heading"><div><div className="eyebrow">VUE D’ENSEMBLE</div><h1>Votre prochain pas, en clair.</h1><p>Vos documents, vos démarches. Tout est au même endroit.</p></div><button className="btn primary" onClick={()=>newDialog.current?.showModal()}><Plus size={18}/>Nouvelle démarche</button></div><div className="overview-grid"><div className="main-column"><div className="metrics"><div><span>Dossiers en cours</span><strong>{cases.filter(c=>c.status!=='reviewed').length.toString().padStart(2,'0')}<FolderOpen size={21}/></strong></div><div><span>Documents réunis</span><strong>{current.documents.length.toString().padStart(2,'0')}<FileText size={21}/></strong></div><div><span>Points à confirmer</span><strong className={current.checks.open_count?'amber-text':''}>{current.checks.open_count.toString().padStart(2,'0')}<CircleAlert size={21}/></strong></div></div>
+        {home&&<><div className="page-heading"><div><div className="eyebrow">TABLEAU DE BORD</div><h1>Conformité & Démarches RNE</h1><p>Centralisez vos déclarations officielles, vérifiez vos pièces et préparez vos formalités sans erreur.</p></div><button className="btn primary" onClick={()=>newDialog.current?.showModal()}><Plus size={18}/>Nouvelle démarche</button></div>
+          <div className="workflow-hero-card">
+            <div className="workflow-hero-icon">
+              <Sparkles size={26} />
+            </div>
+            <div className="workflow-hero-content">
+              <div className="workflow-hero-badge">DÉMARCHE OFFICIELLE PRIORITAIRE</div>
+              <h3>Atelier Interactif RNE F005 (v1.1)</h3>
+              <p>Préparez votre déclaration en 5 étapes guidées avec extraction OCR de votre CIN, explications juridiques pour chaque champ et génération PDF bilingue officielle.</p>
+            </div>
+            <Link className="btn primary hero-cta" href={`/dossiers/${current.id}/formulaire`}>
+              <span>Ouvrir l’Atelier RNE F005</span>
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+          <div className="overview-grid"><div className="main-column"><div className="metrics"><div><span>Dossiers en cours</span><strong>{cases.filter(c=>c.status!=='reviewed').length.toString().padStart(2,'0')}<FolderOpen size={21}/></strong></div><div><span>Documents réunis</span><strong>{current.documents.length.toString().padStart(2,'0')}<FileText size={21}/></strong></div><div><span>Points à confirmer</span><strong className={current.checks.open_count?'amber-text':''}>{current.checks.open_count.toString().padStart(2,'0')}<CircleAlert size={21}/></strong></div></div>
           <section className="panel case-panel"><div className="panel-heading"><div><span className="eyebrow">VOTRE DÉMARCHE</span><h2>{current.title}<span className="case-id">{current.id}</span></h2></div><Status status={current.status}/></div><Steps c={current} step={current.status==='reviewed'||current.status==='submitted'?3:current.can_submit?2:current.documents.length?1:0}/>
           {current.checks.open_count>0?<div className="action-callout"><span className="alert-icon"><CircleAlert size={22}/></span><div><strong>Une information à confirmer</strong><p>{current.checks.open_count} écart{current.checks.open_count>1?'s':''} entre les informations de vos pièces.</p></div><Link className="btn amber-btn" href={`/dossiers/${current.id}/verification`}>Vérifier <ArrowRight size={16}/></Link></div>:<div className="action-callout calm"><span className="alert-icon"><FileCheck2 size={23}/></span><div><strong>{current.status==='reviewed'?'La revue est terminée':current.can_submit?'Votre dossier peut passer à la revue':'Rassemblez les pièces de votre démarche'}</strong><p>{current.status==='reviewed'?'Retrouvez les observations et votre historique.':'Continuez la préparation et consultez les informations extraites.'}</p></div><Link className="btn primary" href={`/dossiers/${current.id}/preparation`}>Continuer <ArrowRight size={16}/></Link></div>}
           <div className="case-split"><div><div className="section-title"><h3>Documents du dossier</h3><Link href={`/dossiers/${current.id}/documents`}>Tout voir <ArrowUpRight size={14}/></Link></div>{current.documents.length?docList(current):<Empty title="Ajoutez vos premières pièces" body="PDF, images ou texte, jusqu’à 12 Mo."/>}</div><div className="company-card"><Building2 size={22}/><h3>{current.company}</h3><dl><dt>Démarche</dt><dd>Transfert du siège</dd><dt>Adresse actuelle</dt><dd>{firstFact(current,'current_address')}</dd></dl><Link href="/entreprise">Voir les informations <ArrowRight size={15}/></Link></div></div></section>
           <Link href="/sources" className="source-strip"><span className="source-strip-icon"><BookOpen size={25}/></span><div><strong>Comprendre avant de transmettre.</strong><p>Retrouvez les sources et le périmètre des vérifications.</p></div><ArrowUpRight size={20}/></Link>
           <p className="scope-note"><ShieldCheck size={14}/>{current.sample?'Dossier fictif pour explorer le parcours. ':''}La revue du prototype ne constitue pas un dépôt officiel.</p>
           </div><Assistant key={current.id} c={current} configured={!!health?.ai_configured}/></div></>}
+
+        
 
         {verification&&<><div className="breadcrumb"><Link href="/dossiers">Mes dossiers</Link><ChevronRight size={13}/>{current.id}<ChevronRight size={13}/>Vérification</div><div className="page-heading"><div><div className="eyebrow">VÉRIFICATION DES PIÈCES</div><h1>Les détails font la différence.</h1><p>Comparez les informations à leur source, puis confirmez les écarts.</p></div><Link className="btn secondary" href={`/dossiers/${current.id}/documents`}><Plus size={17}/>Ajouter une pièce</Link></div><Steps c={current} step={1}/>
           {current.checks.issues.map(issue=><IssuePanel key={current.id+issue.key} issue={issue} c={current} locked={locked} busy={!!busy} preview={openPreview} onConfirm={value=>action('confirm',async()=>{update(await api<Case>(`/cases/${current.id}/confirm`,{method:'POST',body:JSON.stringify({key:issue.key,value})}));setNotice('Confirmation enregistrée. Les pièces originales sont conservées.');})}/>)}
