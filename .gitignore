@@ -80,6 +80,7 @@ pip-selfcheck.json
 
 # Testing & profiling
 .pytest_cache/
+pytest-cache-files-*/
 .coverage
 .coverage.*
 htmlcov/

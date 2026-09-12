@@ -3,9 +3,24 @@ import sqlite3
 import threading
 from datetime import datetime, timezone
 from uuid import uuid4
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from backend.config import DATA
 
 LOCK = threading.RLock()
+
+
+def document_path(document):
+    """Resolve uploads within the current data folder, including pre-handoff paths."""
+    stored = document['file_path']
+    path = Path(stored)
+    if PurePosixPath(stored).is_absolute() or PureWindowsPath(stored).is_absolute():
+        # Older versions stored the colleague's absolute filesystem path.
+        filename = PureWindowsPath(stored).name if '\\' in stored else path.name
+        path = Path('uploads') / filename
+    resolved = (DATA / path).resolve()
+    if not resolved.is_relative_to(DATA.resolve()):
+        raise ValueError('Le chemin de la pièce sort du répertoire des données.')
+    return resolved
 
 def now():
     return datetime.now(timezone.utc).isoformat()

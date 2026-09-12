@@ -13,9 +13,10 @@ from fastapi.responses import FileResponse, Response
 import os
 
 from backend import ai, config, store
-from backend.models import Confirmation, NewCase, Question, Review
-from backend.rules import can_submit, checks
-from backend.sources import SOURCES
+from backend.drafts import render_draft
+from backend.models import Confirmation, CorrectionResponse, DocumentReview, NewCase, Question, Review
+from backend.rules import can_submit, checks, prepared_fields
+from backend.sources import SOURCES, normalize
 
 @asynccontextmanager
 async def lifespan(app):
@@ -33,7 +34,7 @@ def required(case_id):
     return case
 
 def public(case):
-    return {**case, 'documents': [{k: v for k, v in doc.items() if k != 'file_path'} for doc in case['documents']], 'checks': checks(case), 'can_submit': can_submit(case)}
+    return {**case, 'documents': [{k: v for k, v in doc.items() if k != 'file_path'} for doc in case['documents']], 'checks': checks(case), 'prepared_fields': prepared_fields(case), 'can_submit': can_submit(case)}
 
 def editable(case):
     if case['status'] in ('submitted', 'reviewed'):
@@ -98,10 +99,10 @@ async def upload(case_id: str, file: UploadFile = File(...)):
         uploads.mkdir(parents=True, exist_ok=True)
         path = uploads / document_id
         path.write_bytes(content)
-        case['documents'].append({'id': document_id, 'name': name, 'filename': name, 'content_type': mime, 'file_path': str(path), 'sample': False, 'kind': 'other', 'status': 'pending', 'method': 'not_analyzed', 'pages': pages, 'text': '\n\n'.join(p['text'] for p in pages), 'fields': []})
+        case['documents'].append({'id': document_id, 'name': name, 'filename': name, 'content_type': mime, 'file_path': 'uploads/' + document_id, 'sample': False, 'kind': 'other', 'status': 'pending', 'method': 'not_analyzed', 'pages': pages, 'text': '\n\n'.join(p['text'] for p in pages), 'fields': []})
         case['confirmations'] = {}
-        case['sample'] = False
-        case['status'] = 'draft'
+        # A dossier containing synthetic fixtures must keep its demo label.
+        case['sample'] = any(d['sample'] for d in case['documents'])
         store.event(case, 'Document ajouté', detail=name)
         store.save(case)
     return public(case)
@@ -119,7 +120,7 @@ async def analyze(case_id: str, document_id: str):
         raise HTTPException(503, 'Azure n’est pas configuré. Complétez .env puis redémarrez le backend. Votre document reste enregistré.')
     try:
         async with MODEL_SLOTS:
-            result = await ai.extract(Path(doc['file_path']).read_bytes(), doc['content_type'], doc['pages'])
+            result = await ai.extract(store.document_path(doc).read_bytes(), doc['content_type'], doc['pages'])
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
     except Exception as error:
@@ -135,13 +136,40 @@ async def analyze(case_id: str, document_id: str):
         store.save(latest)
     return public(latest)
 
+
+@app.post('/api/cases/{case_id}/documents/{document_id}/review')
+def review_document(case_id: str, document_id: str, body: DocumentReview):
+    with store.LOCK:
+        case = required(case_id)
+        editable(case)
+        doc = next((d for d in case['documents'] if d['id'] == document_id), None)
+        if not doc:
+            raise HTTPException(404, 'Document introuvable.')
+        fields = []
+        for field in body.fields:
+            value, evidence = field.value.strip(), field.evidence.strip()
+            page = next((p for p in doc['pages'] if p['page'] == field.page), None)
+            if not value or not evidence or len(value) > 500 or len(evidence) > 4000 or not page:
+                raise HTTPException(422, 'Chaque champ doit contenir une valeur, un passage source et un numéro de page valide.')
+            if normalize(value) not in normalize(evidence):
+                raise HTTPException(422, 'Le passage source doit contenir la valeur renseignée.')
+            if page['text'].strip() and normalize(evidence) not in normalize(page['text']):
+                raise HTTPException(422, 'Recopiez un passage présent dans le texte de la page sélectionnée.')
+            fields.append({**field.model_dump(), 'value': value, 'evidence': evidence})
+        doc.setdefault('field_history', []).append({'at': store.now(), 'method': doc['method'], 'fields': doc['fields']})
+        doc.update(kind=body.kind, fields=fields, status='extracted', method='manual_review')
+        case['confirmations'] = {}
+        store.event(case, 'Pièce vérifiée manuellement', detail=doc['name'] + ' · Champs saisis par l’entreprise, original conservé.')
+        store.save(case)
+    return public(case)
+
 @app.get('/api/cases/{case_id}/documents/{document_id}/file')
 def document_file(case_id: str, document_id: str):
     doc = next((d for d in required(case_id)['documents'] if d['id'] == document_id), None)
     if not doc:
         raise HTTPException(404, 'Document introuvable.')
     if doc['file_path']:
-        return FileResponse(doc['file_path'], media_type=doc['content_type'], filename=doc['filename'], content_disposition_type='inline', headers={'X-Content-Type-Options': 'nosniff'})
+        return FileResponse(store.document_path(doc), media_type=doc['content_type'], filename=doc['filename'], content_disposition_type='inline', headers={'X-Content-Type-Options': 'nosniff'})
     return Response(doc['text'], media_type='text/plain; charset=utf-8')
 
 @app.post('/api/cases/{case_id}/confirm')
@@ -152,8 +180,6 @@ def confirm(case_id: str, body: Confirmation):
     with store.LOCK:
         case = required(case_id)
         editable(case)
-        if not any(f['key'] == body.key for d in case['documents'] for f in d['fields']):
-            raise HTTPException(422, 'Aucune information extraite pour ce champ.')
         case['confirmations'][body.key] = {'value': value, 'at': store.now(), 'actor': 'Entreprise'}
         store.event(case, 'Information confirmée', detail=f'{body.key} : {value}. Les pièces originales sont conservées.')
         store.save(case)
@@ -165,7 +191,7 @@ def submit(case_id: str):
         case = required(case_id)
         editable(case)
         if not can_submit(case):
-            raise HTTPException(409, 'Analysez les pièces et confirmez les écarts avant de transmettre à la revue.')
+            raise HTTPException(409, 'Vérifiez les pièces, complétez les informations et répondez aux corrections avant de transmettre à la revue.')
         case['status'] = 'submitted'
         store.event(case, 'Dossier transmis à la revue', detail='Revue locale du prototype. Aucun dépôt auprès du RNE.')
         store.save(case)
@@ -180,7 +206,24 @@ def review(case_id: str, body: Review):
         if body.action == 'request_correction' and not body.note.strip():
             raise HTTPException(422, 'Précisez la correction à demander.')
         case['status'] = 'correction_requested' if body.action == 'request_correction' else 'reviewed'
+        if body.action == 'request_correction':
+            case['correction'] = {'note': body.note.strip(), 'at': store.now(), 'pending': True, 'response': None}
         store.event(case, 'Correction demandée' if body.action == 'request_correction' else 'Revue terminée', 'Agent (simulation)', body.note.strip())
+        store.save(case)
+    return public(case)
+
+
+@app.post('/api/cases/{case_id}/correction-response')
+def correction_response(case_id: str, body: CorrectionResponse):
+    if not body.note.strip():
+        raise HTTPException(422, 'Décrivez votre réponse à l’agent.')
+    with store.LOCK:
+        case = required(case_id)
+        editable(case)
+        if not case.get('correction', {}).get('pending'):
+            raise HTTPException(409, 'Aucune correction en attente de réponse.')
+        case['correction'].update(pending=False, response=body.note.strip(), responded_at=store.now())
+        store.event(case, 'Réponse à la correction', detail=body.note.strip())
         store.save(case)
     return public(case)
 
@@ -198,8 +241,8 @@ async def assistant(case_id: str, body: Question):
 
 @app.get('/api/cases/{case_id}/export')
 def export(case_id: str):
-    case = public(required(case_id))
     raw = required(case_id)
+    case = public(raw)
     escape = html.escape
     fields = ''.join(f'<li><strong>{escape(key)}</strong> : {escape(value["value"])}</li>' for key, value in case['confirmations'].items())
     evidence = ''.join(f'<h3>{escape(doc["name"])}</h3><pre>{escape(doc["text"])}</pre>' for doc in case['documents'])
@@ -208,10 +251,16 @@ def export(case_id: str):
     output = io.BytesIO()
     with ZipFile(output, 'w') as archive:
         archive.writestr('synthese.html', summary)
+        archive.writestr('brouillon-changement-adresse.html', render_draft(raw))
         archive.writestr('dossier.json', json.dumps(case, ensure_ascii=False, indent=2))
         for i, doc in enumerate(raw['documents']):
             if doc['file_path']:
-                archive.write(doc['file_path'], f'pieces/{i + 1:02d}-{doc["filename"]}')
+                archive.write(store.document_path(doc), f'pieces/{i + 1:02d}-{doc["filename"]}')
             else:
                 archive.writestr(f'pieces/{i + 1:02d}-demonstration.txt', doc['text'])
     return Response(output.getvalue(), media_type='application/zip', headers={'Content-Disposition': f'attachment; filename="{case_id}.zip"'})
+
+
+@app.get('/api/cases/{case_id}/draft')
+def draft(case_id: str):
+    return Response(render_draft(required(case_id)), media_type='text/html; charset=utf-8', headers={'Content-Disposition': f'attachment; filename="{case_id}-brouillon.html"', 'X-Content-Type-Options': 'nosniff'})

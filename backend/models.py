@@ -28,3 +28,10 @@ class Review(BaseModel):
 
 class Question(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
+
+class DocumentReview(BaseModel):
+    kind: Literal['declaration', 'decision', 'registry', 'other']
+    fields: list[ExtractedField] = Field(max_length=30)
+
+class CorrectionResponse(BaseModel):
+    note: str = Field(min_length=1, max_length=2000)
