@@ -24,6 +24,8 @@ async def lifespan(app):
     yield
 
 app = FastAPI(title='Dossier TN', lifespan=lifespan)
+from backend.rne_routes import router as rne_router
+app.include_router(rne_router)
 app.add_middleware(CORSMiddleware, allow_origins=os.getenv('DOSSIER_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(','), allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 MODEL_SLOTS = asyncio.Semaphore(2)
 
@@ -253,6 +255,13 @@ def export(case_id: str):
         archive.writestr('synthese.html', summary)
         archive.writestr('brouillon-changement-adresse.html', render_draft(raw))
         archive.writestr('dossier.json', json.dumps(case, ensure_ascii=False, indent=2))
+        if raw.get('rne'):
+            from backend.rne_flow import load_state
+            from backend.rne_knowledge import blockers
+            from backend.rne_pdf import render_f005
+            rne = load_state(raw)
+            if rne.pdf_revision == rne.revision and not blockers(rne):
+                archive.writestr('RNE-F005.pdf', render_f005(rne))
         for i, doc in enumerate(raw['documents']):
             if doc['file_path']:
                 archive.write(store.document_path(doc), f'pieces/{i + 1:02d}-{doc["filename"]}')

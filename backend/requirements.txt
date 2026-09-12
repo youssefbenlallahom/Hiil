@@ -9,3 +9,7 @@ pypdfium2>=4,<6
 Pillow>=11,<13
 httpx>=0.28,<1
 pytest>=8,<10
+crewai==1.15.21
+reportlab>=4.4,<5
+arabic-reshaper>=3,<4
+python-bidi>=0.6,<1
