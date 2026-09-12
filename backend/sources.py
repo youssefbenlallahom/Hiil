@@ -13,7 +13,7 @@ SOURCES = [
         'id': 'rne-form', 'title': 'RNE F 005 · Déclaration de modification',
         'url': 'https://www.registre-entreprises.tn/rne-public/assets/pdfs/formulaires/RNE-F-005_declaration_modification_personne_morale.pdf',
         'type': 'Formulaire officiel · version 1.1 publiée', 'checked_at': '2026-09-12',
-        'text': 'Le formulaire RNE F 005 est une déclaration de modification d’une société ou d’un établissement public. Il contient notamment l’identifiant unique, le représentant légal, le nom du déclarant, son identité, son e-mail et son numéro GSM. Ses instructions demandent de remplir les données en arabe, avec le français en complément facultatif. Ce prototype ne remplit pas encore toutes les rubriques du formulaire et ne vérifie pas l’authenticité des pièces.',
+        'text': 'Le formulaire RNE F 005 déclare une modification d’une société ou d’un établissement public. Le parcours guidé remplit les rubriques d’identité et de contact et la case changement d’adresse du siège social après confirmation humaine. Les consignes demandent des données en arabe, avec le français en complément facultatif. La date et la signature restent à compléter. La liste exhaustive des justificatifs et l’authenticité des pièces ne sont pas validées.',
     },
     {
         'id': 'dgi-docs', 'title': 'DGI · Base documentaire Jibaya',

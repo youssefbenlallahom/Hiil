@@ -44,7 +44,7 @@ def render_f005(state: RneState) -> bytes:
         needed = pdfmetrics.stringWidth(drawn, font, size)
         size = min(size, size * max_width / max(needed, 1))
         if size < 8:
-            raise ValueError('La valeur de ' + key + ' est trop longue pour le formulaire ; utilisez une graphie plus courte et vérifiez-la.')
+            raise ValueError('La valeur de ' + key + ' ne tient pas dans la rubrique ; une vérification manuelle du formulaire est nécessaire.')
         pdf.setFont(font, size)
         (pdf.drawRightString if arabic else pdf.drawString)(x + max_width if arabic else x, y, drawn)
 
@@ -58,9 +58,9 @@ def render_f005(state: RneState) -> bytes:
     text('representative_name', 127, 543, 355, 13)
     boxes('representative_id', 203, 18.3, 514)
     text('email', 60, 489, 427)
-    text('phone', 60, 466, 425)
-    text('declarant_name', 108, 444, 385, 13)
-    text('declarant_id', 146, 421, 310, 12)
+    text('phone', 68, 466, 415)
+    text('declarant_name', 125, 444, 345, 13)
+    text('declarant_id', 158, 421, 300, 12)
     # تغيير عنوان المقر الاجتماعي, right column, third checkbox.
     pdf.setStrokeColorRGB(0.04, 0.10, 0.16)
     pdf.setLineWidth(1.6)
@@ -69,9 +69,9 @@ def render_f005(state: RneState) -> bytes:
     pdf.showPage()
     pdf.save()
     overlay = PdfReader(io.BytesIO(layer.getvalue()))
-    reader.pages[0].merge_page(overlay.pages[0])
     writer = PdfWriter()
     writer.append_pages_from_reader(reader)
+    writer.pages[0].merge_page(overlay.pages[0])
     writer.add_metadata({'/Title': 'RNE F005 - Declaration preparee', '/Subject': 'Donnees confirmees par le declarant. Signature et date a completer. Aucun depot officiel.'})
     output = io.BytesIO()
     writer.write(output)

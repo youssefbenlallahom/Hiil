@@ -26,6 +26,10 @@ async def lifespan(app):
 app = FastAPI(title='Dossier TN', lifespan=lifespan)
 from backend.rne_routes import router as rne_router
 app.include_router(rne_router)
+from backend.institution import router as institution_router
+from backend.demo import router as demo_router
+app.include_router(institution_router)
+app.include_router(demo_router)
 app.add_middleware(CORSMiddleware, allow_origins=os.getenv('DOSSIER_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(','), allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 MODEL_SLOTS = asyncio.Semaphore(2)
 
@@ -203,6 +207,8 @@ def submit(case_id: str):
 def review(case_id: str, body: Review):
     with store.LOCK:
         case = required(case_id)
+        if case.get('institution'):
+            raise HTTPException(409, 'Utilisez le portail institutionnel F005 pour conserver la décision sur sa version transmise.')
         if case['status'] != 'submitted':
             raise HTTPException(409, 'Ce dossier n’est pas en attente de revue.')
         if body.action == 'request_correction' and not body.note.strip():
@@ -255,6 +261,8 @@ def export(case_id: str):
         archive.writestr('synthese.html', summary)
         archive.writestr('brouillon-changement-adresse.html', render_draft(raw))
         archive.writestr('dossier.json', json.dumps(case, ensure_ascii=False, indent=2))
+        if raw.get('institution'):
+            archive.writestr('revue-institutionnelle.json', json.dumps(raw['institution'], ensure_ascii=False, indent=2))
         if raw.get('rne'):
             from backend.rne_flow import load_state
             from backend.rne_knowledge import blockers

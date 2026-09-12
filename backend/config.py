@@ -10,6 +10,7 @@ if not DATA.is_absolute():
 BASE_URL = os.getenv('AZURE_OPENAI_BASE_URL', '').strip()
 API_KEY = os.getenv('AZURE_OPENAI_API_KEY', '').strip()
 DEPLOYMENT = os.getenv('AZURE_OPENAI_CHAT_DEPLOYMENT', '').strip()
+MODEL_THINKING = os.getenv('AZURE_MODEL_THINKING', 'auto').strip().lower()
 OCR_ENDPOINT = os.getenv('AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT', '').strip().rstrip('/')
 OCR_KEY = os.getenv('AZURE_DOCUMENT_INTELLIGENCE_KEY', '').strip()
 

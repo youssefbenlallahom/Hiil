@@ -3,6 +3,9 @@ import re
 
 FORM_URL = 'https://www.registre-entreprises.tn/rne-public/assets/pdfs/formulaires/RNE-F-005_declaration_modification_personne_morale.pdf'
 REFERENCES = [
+    {'id': 'rne-procedure-index', 'title': 'RNE · Procédure M 004.03', 'page': None, 'url': 'https://home.registre-entreprises.tn/formalites/',
+     'checked_at': '2026-09-12', 'authority': 'Registre national des entreprises',
+     'text': 'Le tableau officiel associe le transfert du siège social des sociétés au code RNE M 004.03. La ligne M 004.06 concerne le changement d’adresse d’une filiale. Cet index identifie les procédures ; sa consultation ne valide pas ici une liste exhaustive des justificatifs.'},
     {'id': 'f005-fields', 'title': 'RNE F005 · Rubriques', 'page': 1, 'url': '/api/rne/template',
      'text': 'La page 1 distingue identifiant unique, représentant légal et N° identité, e-mail, GSM, nom et N° identité du déclarant. Le numéro de certificat de réservation est conditionnel, le RIB concerne sa modification. Aucune zone ne détaille ancienne et nouvelle adresse.'},
     {'id': 'f005-choices', 'title': 'RNE F005 · Nature du changement', 'page': 1, 'url': '/api/rne/template',

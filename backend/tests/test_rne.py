@@ -154,7 +154,7 @@ def test_identity_evidence_and_human_correction_survive_reanalysis(client, monke
 def test_ambiguous_intent_then_answering_question_keeps_state(client, monkeypatch):
     base = new(client)
     monkeypatch.setattr(config, 'azure_ready', lambda: True)
-    async def ambiguous(state, message):
+    async def ambiguous(state, message, case=None):
         return Proposal(reply='L’adresse du siège ou celle d’une succursale ?', candidates=['seat_address', 'branch_address'], reason='Le mot local ne permet pas de distinguer les deux.', source_ids=['f005-choices'])
     monkeypatch.setattr(rne_agent, 'propose', ambiguous)
     result = turn(client, base, action='message', message='Je change de local').json()
@@ -163,7 +163,7 @@ def test_ambiguous_intent_then_answering_question_keeps_state(client, monkeypatc
     assert len(result['candidates']) == 2
     ready(client, base)
     turn(client, base, action='prepare')
-    async def explanation(state, message):
+    async def explanation(state, message, case=None):
         return Proposal(reply='Le formulaire demande les données en arabe ; le français est facultatif.', source_ids=['f005-instructions'])
     monkeypatch.setattr(rne_agent, 'propose', explanation)
     result = turn(client, base, action='message', message='Pourquoi en arabe ?').json()
@@ -175,7 +175,7 @@ def test_ambiguous_intent_then_answering_question_keeps_state(client, monkeypatc
 def test_failed_agent_turn_is_atomic(client, monkeypatch):
     base = new(client)
     monkeypatch.setattr(config, 'azure_ready', lambda: True)
-    async def failure(state, message):
+    async def failure(state, message, case=None):
         raise RuntimeError('Provider failure with private request detail')
     monkeypatch.setattr(rne_agent, 'propose', failure)
     response = turn(client, base, action='message', message='Bonjour')

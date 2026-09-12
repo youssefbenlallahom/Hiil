@@ -12,6 +12,7 @@ from backend import rne_agent, store
 from crewai.flow.flow import Flow, start, listen, router, or_
 from backend.rne_knowledge import LABELS, REFERENCES, blockers, field_error, stage
 from backend.rne_models import Evidence, Message, RneRequest, RneState, Value
+from backend.sources import normalize
 
 
 def load_state(case):
@@ -39,7 +40,7 @@ def set_value(state, key, value, evidence):
         state.values.pop('representative_name', None)
         state.values.pop('representative_id', None)
     state.values[key] = Value(value=value.strip(), evidence=evidence)
-    if state.values.get('same_person', Value(value='no')).value == 'yes':
+    if key in ('same_person', 'declarant_name', 'declarant_id') and state.values.get('same_person', Value(value='no')).value == 'yes':
         for source, target in [('declarant_name', 'representative_name'), ('declarant_id', 'representative_id')]:
             if source in state.values:
                 state.values[target] = Value(value=state.values[source].value,
@@ -75,7 +76,7 @@ class DeclarationFlow(Flow[RneState]):
         message = self.request.message.strip()
         if not message:
             raise ValueError('Écrivez votre demande.')
-        proposal = await rne_agent.propose(self.state, message)
+        proposal = await rne_agent.propose(self.state, message, self.case)
         msg = self.add_message('user', message)
         # Handle the role before any name/identity updates, independent of model order.
         for update in sorted(proposal.updates, key=lambda u: u.key != 'same_person'):
@@ -133,6 +134,8 @@ class DeclarationFlow(Flow[RneState]):
         doc = next((d for d in self.case['documents'] if d['id'] == self.state.cin_document_id), None)
         if not doc:
             raise ValueError('Joignez d’abord la CIN du déclarant.')
+        if doc.get('sample'):
+            raise ValueError('Cette fiche est fictive et préanalysée. Joignez une pièce dans un nouveau dossier pour lancer une lecture réelle.')
         fields, pages, method = await rne_agent.extract_cin(store.document_path(doc).read_bytes(), doc['content_type'], doc['pages'])
         def evidence(f):
             return Evidence(origin='document', reference_id=doc['id'], page=f.page, quote=f.evidence)
@@ -148,6 +151,24 @@ class DeclarationFlow(Flow[RneState]):
         doc['identity_fields'] = [f.model_dump() for f in fields]
         self.add_message('assistant', 'La lecture de la CIN est terminée. Les valeurs lisibles sont proposées à droite avec leurs passages sources ; vérifiez-les sur l’original. ' + ('Les noms et le numéro restent à confirmer.' if len(found) == 3 else 'Certaines informations restent illisibles ou non reconnues : vous pouvez les recopier depuis l’original.'), ['pilot-scope'])
         invalidate(self.state)
+
+    @listen('use_evidence')
+    def retain_source_value(self):
+        if self.request.key != 'company_id':
+            raise ValueError('Cette action concerne uniquement l’identifiant de la société.')
+        doc = next((d for d in self.case['documents'] if d['id'] == self.request.document_id), None)
+        facts = [f for f in doc['fields'] if f['key'] == 'company_id'] if doc else []
+        if not facts or len({normalize(f['value']) for f in facts}) != 1:
+            raise ValueError('La pièce ne contient pas un identifiant unique exploitable.')
+        fact = facts[0]
+        page = next((p for p in doc['pages'] if p['page'] == fact['page']), None)
+        if not page or not fact['evidence'].strip() or normalize(fact['evidence']) not in normalize(page['text']) or normalize(fact['value']) not in normalize(fact['evidence']):
+            raise ValueError('Le passage de cette pièce doit être vérifié avant de retenir la valeur.')
+        if error := field_error('company_id', fact['value']):
+            raise ValueError(error)
+        self.add_message('user', 'Je retiens pour la société l’identifiant ' + fact['value'] + ' de la pièce « ' + doc['name'] + ' ».')
+        set_value(self.state, 'company_id', fact['value'], [Evidence(origin='document', reference_id=doc['id'], page=fact['page'], quote=fact['evidence'])])
+        self.add_message('assistant', 'L’identifiant proposé est maintenant relié au passage de cette pièce. Les originaux restent conservés. Relisez le récapitulatif avant de confirmer.')
 
     @listen('confirm')
     def confirm_fields(self):
@@ -173,7 +194,7 @@ class DeclarationFlow(Flow[RneState]):
         self.state.pdf_revision = self.state.revision + 1
         self.add_message('assistant', 'Le formulaire F005 est prêt à être relu et téléchargé. La case « changement d’adresse du siège social » est cochée. La date et la signature sont laissées libres ; aucun dépôt n’a été effectué.', ['f005-fields', 'f005-instructions'])
 
-    @listen(or_(converse, edit_field, select_intent, extract_identity, confirm_fields, prepare_pdf))
+    @listen(or_(converse, edit_field, select_intent, extract_identity, confirm_fields, prepare_pdf, retain_source_value))
     def finish(self):
         old_revision = self.state.revision
         self.state.revision += 1

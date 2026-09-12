@@ -10,6 +10,7 @@ from backend.rne_flow import DeclarationFlow, load_state, view, invalidate
 from backend.rne_knowledge import blockers
 from backend.rne_models import Evidence, Message, RneRequest
 from backend.rne_pdf import TEMPLATE, render_f005
+from backend.evidence import report
 
 router = APIRouter(prefix='/api')
 SLOTS = asyncio.Semaphore(2)
@@ -27,7 +28,10 @@ def case_for(case_id, editing=False):
 def response_for(case):
     state = load_state(case)
     doc = next((d for d in case['documents'] if d['id'] == state.cin_document_id), None)
-    return {**view(state), 'ai_configured': config.azure_ready(),
+    evidence_case = {**case, 'rne': state.model_dump()}
+    return {**view(state), 'ai_configured': config.azure_ready(), 'report': report(evidence_case),
+            'sample': case.get('demo_scenario') is not None,
+            'institution': {k: v for k, v in case.get('institution', {}).items() if k not in ('snapshot', 'report', 'history')},
             'cin_document_name': doc['name'] if doc else None,
             'locked': case['status'] in ('submitted', 'reviewed')}
 
@@ -53,8 +57,8 @@ async def rne_turn(case_id: str, body: RneRequest):
             raise HTTPException(409, 'Le dossier a changé dans un autre onglet. Rechargez le récapitulatif avant de continuer.')
     if body.action in ('message', 'extract_cin') and not config.azure_ready():
         raise HTTPException(503, 'Azure est indisponible. Vous pouvez sélectionner la modification et compléter les rubriques manuellement.')
-    flow = DeclarationFlow(state, body, case)
     try:
+        flow = DeclarationFlow(state, body, case)
         async with SLOTS:
             async with asyncio.timeout(210):
                 await flow.kickoff_async()

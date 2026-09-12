@@ -65,11 +65,12 @@ class RneRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     revision: int = Field(ge=0)
     request_id: str = Field(min_length=8, max_length=80, pattern=r'^[a-zA-Z0-9-]+$')
-    action: Literal['message', 'edit', 'select_modification', 'confirm', 'prepare', 'extract_cin'] = 'message'
+    action: Literal['message', 'edit', 'select_modification', 'confirm', 'prepare', 'extract_cin', 'use_evidence'] = 'message'
     message: str = Field(default='', max_length=3000)
     key: FieldKey | None = None
     value: str = Field(default='', max_length=180)
     modification: Modification | None = None
+    document_id: str = Field(default='', max_length=80)
 
 
 class IdentityField(BaseModel):
