@@ -8,7 +8,7 @@ if (!existsSync(python)) {
   process.exit(1);
 }
 const children = [
-  spawn(python, ['-m', 'uvicorn', 'backend.main:app', '--host', '127.0.0.1', '--port', '8000'], { stdio: 'inherit', windowsHide: true }),
+  spawn(python, ['-m', 'uvicorn', 'backend.main:app', '--host', '127.0.0.1', '--port', '8000', '--reload', '--reload-dir', 'backend'], { stdio: 'inherit', windowsHide: true }),
   spawn(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1'], { stdio: 'inherit', windowsHide: true }),
 ];
 let shuttingDown = false;

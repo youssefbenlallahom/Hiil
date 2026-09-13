@@ -1,6 +1,7 @@
 import json
 import sqlite3
 import threading
+from contextlib import closing
 from datetime import datetime, timezone
 from uuid import uuid4
 from backend.config import DATA
@@ -23,35 +24,35 @@ def connect():
 
 
 def load_conversation(case_id):
-    with connect() as db:
+    with closing(connect()) as db:
         row = db.execute('SELECT payload FROM conversations WHERE case_id = ?', (case_id,)).fetchone()
     return json.loads(row[0]) if row else None
 
 
 def save_conversation(case_id, state):
-    with LOCK, connect() as db:
+    with LOCK, closing(connect()) as db, db:
         db.execute('INSERT OR REPLACE INTO conversations VALUES (?, ?)', (case_id, json.dumps(state, ensure_ascii=False)))
 
 
 def delete_conversation(case_id):
-    with LOCK, connect() as db:
+    with LOCK, closing(connect()) as db, db:
         db.execute('DELETE FROM conversations WHERE case_id = ?', (case_id,))
 
 def save(case):
-    with connect() as db:
+    with closing(connect()) as db, db:
         db.execute('INSERT OR REPLACE INTO cases VALUES (?, ?)', (case['id'], json.dumps(case, ensure_ascii=False)))
 
 def get(case_id):
-    with connect() as db:
+    with closing(connect()) as db:
         row = db.execute('SELECT payload FROM cases WHERE id = ?', (case_id,)).fetchone()
     return json.loads(row[0]) if row else None
 
 def all_cases():
-    with connect() as db:
+    with closing(connect()) as db:
         return [json.loads(row[0]) for row in db.execute('SELECT payload FROM cases ORDER BY rowid')]
 
 def new_case(company, sample=False, case_id=None):
-    return {'id': case_id or 'DOS-' + uuid4().hex[:6].upper(), 'company': company, 'title': 'Changement d’adresse', 'sample': sample, 'status': 'draft', 'documents': [], 'confirmations': {}, 'events': [], 'created_at': now(), 'updated_at': now()}
+    return {'id': case_id or 'DOS-' + uuid4().hex[:12].upper(), 'company': company, 'title': 'Déclaration de modification', 'sample': sample, 'status': 'draft', 'documents': [], 'confirmations': {}, 'events': [], 'created_at': now(), 'updated_at': now()}
 
 def seed():
     with LOCK:

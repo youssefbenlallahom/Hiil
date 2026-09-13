@@ -16,16 +16,21 @@ from backend import ai, config, store
 from backend.models import Confirmation, NewCase, Question, Review, ConversationMessage, ConversationResponse
 from backend.flow import conversation_turn, process_cin_upload, get_session, clear_session, conversation_lock, generate_form
 from backend.rules import can_submit, checks
-from backend.sources import SOURCES
+from backend.sources import list_sources, refresh_sources
+from backend import form_routes
 from backend.form_routes import router as form_router
+from backend.analytics import router as analytics_router
 
 @asynccontextmanager
 async def lifespan(app):
-    store.seed()
+    if config.DEMO_DATA:
+        store.seed()
+    await asyncio.to_thread(list_sources)
     yield
 
 app = FastAPI(title='Dossier TN', lifespan=lifespan)
 app.include_router(form_router)
+app.include_router(analytics_router)
 app.add_middleware(CORSMiddleware, allow_origins=os.getenv('DOSSIER_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(','), allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 MODEL_SLOTS = asyncio.Semaphore(2)
 
@@ -36,7 +41,10 @@ def required(case_id):
     return case
 
 def public(case):
-    return {**case, 'documents': [{k: v for k, v in doc.items() if k != 'file_path'} for doc in case['documents']], 'checks': checks(case), 'can_submit': can_submit(case)}
+    draft = form_routes.public(form_routes.load(case['id']))
+    return {**case, 'documents': [{k: v for k, v in doc.items() if k != 'file_path'} for doc in case['documents']],
+            'checks': checks(case), 'can_submit': can_submit(case),
+            'form': {k: draft[k] for k in ('revision', 'has_pdf', 'ready', 'step', 'modifications', 'errors')}}
 
 def editable(case):
     if case['status'] in ('submitted', 'reviewed'):
@@ -44,11 +52,27 @@ def editable(case):
 
 @app.get('/api/health')
 def health():
-    return {'status': 'ok', 'ai_configured': config.azure_ready(), 'ocr_configured': bool(config.OCR_ENDPOINT and config.OCR_KEY), 'mode': 'local_prototype'}
+    return {'status': 'ok', 'ai_configured': config.azure_ready(), 'ocr_configured': bool(config.OCR_ENDPOINT and config.OCR_KEY),
+            'ocr_provider': 'Azure Document Intelligence' if config.OCR_ENDPOINT and config.OCR_KEY else 'Azure Vision' if config.azure_ready() else 'OCR Windows' if os.name == 'nt' else None,
+            'mode': 'local_workspace', 'institutional_connection': False}
 
 @app.get('/api/sources')
 def sources():
-    return SOURCES
+    return [{k: v for k, v in s.items() if k not in ('pages', 'local_asset')} for s in list_sources()]
+
+
+@app.post('/api/sources/refresh')
+async def refresh_references():
+    return [{k: v for k, v in s.items() if k not in ('pages', 'local_asset')} for s in await refresh_sources()]
+
+
+@app.get('/api/sources/{source_id}/snapshot')
+def source_snapshot(source_id: str):
+    item = next((s for s in list_sources() if s['id'] == source_id), None)
+    if not item or not item.get('hash'):
+        raise HTTPException(404, 'Aucune copie collectée de cette référence.')
+    path = config.DATA / 'source-snapshots' / item['hash']
+    return FileResponse(path, media_type=item['content_type'], filename=source_id + ('.pdf' if item['content_type'] == 'application/pdf' else '.html'), content_disposition_type='attachment')
 
 @app.get('/api/cases')
 def cases():
@@ -94,14 +118,18 @@ async def upload(case_id: str, file: UploadFile = File(...)):
     with store.LOCK:
         case = required(case_id)
         editable(case)
-        if len(case['documents']) >= 12:
-            raise HTTPException(422, 'Limite du prototype : 12 documents par dossier.')
+        if len(case['documents']) >= 24:
+            raise HTTPException(422, 'Limite : 24 documents par dossier.')
+        import hashlib
+        digest = hashlib.sha256(content).hexdigest()
+        if any(d.get('sha256') == digest for d in case['documents']):
+            return public(case)
         document_id = uuid4().hex
         uploads = config.DATA / 'uploads'
         uploads.mkdir(parents=True, exist_ok=True)
         path = uploads / document_id
         path.write_bytes(content)
-        case['documents'].append({'id': document_id, 'name': name, 'filename': name, 'content_type': mime, 'file_path': str(path), 'sample': False, 'kind': 'other', 'status': 'pending', 'method': 'not_analyzed', 'pages': pages, 'text': '\n\n'.join(p['text'] for p in pages), 'fields': []})
+        case['documents'].append({'id': document_id, 'sha256': digest, 'name': name, 'filename': name, 'content_type': mime, 'file_path': str(path), 'sample': False, 'kind': 'other', 'status': 'pending', 'method': 'not_analyzed', 'pages': pages, 'text': '\n\n'.join(p['text'] for p in pages), 'fields': []})
         case['confirmations'] = {}
         case['sample'] = False
         case['status'] = 'draft'
@@ -191,7 +219,8 @@ def review(case_id: str, body: Review):
 async def assistant(case_id: str, body: Question):
     try:
         async with MODEL_SLOTS:
-            return await ai.answer(body.question, required(case_id))
+            draft = form_routes.public(form_routes.load(case_id))
+            return await ai.answer(body.question, required(case_id), draft, body.field)
     except HTTPException:
         raise
     except ValueError as error:
@@ -206,12 +235,23 @@ def export(case_id: str):
     escape = html.escape
     fields = ''.join(f'<li><strong>{escape(key)}</strong> : {escape(value["value"])}</li>' for key, value in case['confirmations'].items())
     evidence = ''.join(f'<h3>{escape(doc["name"])}</h3><pre>{escape(doc["text"])}</pre>' for doc in case['documents'])
-    source_links = ''.join(f'<li><a href="{escape(s["url"], quote=True)}">{escape(s["title"])}</a></li>' for s in SOURCES)
+    source_links = ''.join(f'<li><a href="{escape(s["url"], quote=True)}">{escape(s["title"])}</a></li>' for s in list_sources() if s.get('hash'))
     summary = f'<!doctype html><html lang="fr"><meta charset="utf-8"><title>Dossier {escape(case_id)}</title><style>body{{font:16px system-ui;max-width:900px;margin:48px auto;padding:24px;color:#172d35}}pre{{white-space:pre-wrap;background:#f3f5f5;padding:24px}}h1{{color:#075866}}</style><h1>{escape(case["company"])} — {escape(case_id)}</h1><p>Note de préparation. Aucun dépôt officiel. Contrôles de cohérence uniquement ; complétude réglementaire et authenticité non vérifiées.</p><h2>Informations confirmées</h2><ul>{fields or "<li>Aucune confirmation enregistrée.</li>"}</ul><h2>Pièces et texte extrait</h2>{evidence}<h2>Sources de référence</h2><ul>{source_links}</ul></html>'
     output = io.BytesIO()
     with ZipFile(output, 'w') as archive:
         archive.writestr('synthese.html', summary)
         archive.writestr('dossier.json', json.dumps(case, ensure_ascii=False, indent=2))
+        draft = form_routes.public(form_routes.load(case_id))
+        archive.writestr('declaration.json', json.dumps(draft, ensure_ascii=False, indent=2))
+        pdf = config.DATA / 'form-generated' / f'{case_id}.pdf'
+        if draft['has_pdf'] and pdf.is_file():
+            archive.write(pdf, f'{case_id}-RNE-F005-a-signer.pdf')
+        # Include old uploads as well as the shared document library, preserving existing dossiers.
+        for batch in draft.get('imports', []):
+            if not batch.get('document_id'):
+                original = config.DATA / 'form-uploads' / case_id / batch['id']
+                if original.is_file():
+                    archive.write(original, 'pieces/formulaire-' + Path(batch['name']).name)
         for i, doc in enumerate(raw['documents']):
             if doc['file_path']:
                 archive.write(doc['file_path'], f'pieces/{i + 1:02d}-{doc["filename"]}')

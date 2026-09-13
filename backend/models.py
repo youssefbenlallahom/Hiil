@@ -28,6 +28,16 @@ class Review(BaseModel):
 
 class Question(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
+    field: str | None = Field(default=None, max_length=80)
+
+class Citation(BaseModel):
+    source_id: str
+    quote: str = Field(min_length=1)
+
+class GroundedAnswer(BaseModel):
+    text: str
+    citations: list[Citation]
+    insufficient_evidence: bool
 
 class ConversationMessage(BaseModel):
     message: str = Field(min_length=1, max_length=2000)

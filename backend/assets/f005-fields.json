@@ -1,0 +1,155 @@
+{
+  "version": "RNE F005 · v1.1",
+  "fields": [
+    {
+      "key": "identifiant_unique",
+      "label": "Identifiant unique de l’entreprise",
+      "arabic": "المعرّف الوحيد",
+      "step": 1,
+      "required": true,
+      "max_length": 8,
+      "help": "L’identifiant de l’entreprise à laquelle se rapporte cette déclaration.",
+      "where": "Recopiez l’identifiant figurant sur l’extrait RNE ou la pièce fiscale de l’entreprise.",
+      "example": "7 chiffres suivis d’une lettre",
+      "tip": "Conservez le zéro initial. Utilisez l’identifiant de la société, pas celui du dirigeant.",
+      "input_type": "text",
+      "pattern": "[0-9]{7}[A-Za-z]",
+      "source": "form"
+    },
+    {
+      "key": "certificat_reservation",
+      "label": "Référence de réservation du nom",
+      "arabic": "رقم شهادة الحجز عند الاقتضاء",
+      "step": 1,
+      "required": false,
+      "max_length": 14,
+      "help": "Le formulaire prévoit cette référence « le cas échéant ».",
+      "where": "Sur le certificat de réservation que vous possédez.",
+      "example": "Référence du certificat",
+      "tip": "Recopiez votre document. Le formulaire ne permet pas de vérifier la validité de la réservation.",
+      "input_type": "text",
+      "visible_when": [
+        "denomination"
+      ],
+      "source": "form"
+    },
+    {
+      "key": "rib",
+      "label": "Nouveau RIB de l’entreprise",
+      "arabic": "المعرّف البنكي في حالة تغييره",
+      "step": 1,
+      "required": false,
+      "max_length": 20,
+      "help": "Le compte bancaire à déclarer lorsque vous modifiez cette information.",
+      "where": "Sur le relevé d’identité bancaire du compte de l’entreprise.",
+      "example": "20 chiffres",
+      "tip": "Saisissez le RIB de l’entreprise, sans espaces. Vérifiez les chiffres sur le document bancaire.",
+      "input_type": "text",
+      "visible_when": [
+        "banque"
+      ],
+      "required_when": [
+        "banque"
+      ],
+      "source": "form"
+    },
+    {
+      "key": "representant_legal",
+      "label": "Nom du représentant légal",
+      "arabic": "الممثل القانوني",
+      "step": 2,
+      "required": true,
+      "max_length": 80,
+      "help": "La personne désignée pour représenter l’entreprise dans ses documents.",
+      "where": "Sur l’extrait RNE ou l’acte désignant le représentant.",
+      "example": "Nom complet tel qu’il figure sur la pièce",
+      "tip": "Conservez l’orthographe d’origine, notamment en arabe. Ne traduisez pas automatiquement les noms.",
+      "input_type": "text",
+      "source": "form"
+    },
+    {
+      "key": "identite_representant",
+      "label": "N° d’identité du représentant",
+      "arabic": "رقم الهوية",
+      "step": 2,
+      "required": true,
+      "max_length": 11,
+      "help": "Le numéro de la pièce d’identité de cette personne.",
+      "where": "Sur la CIN, le passeport ou la carte de séjour du représentant.",
+      "example": "Numéro exact de la pièce",
+      "tip": "Les zéros initiaux et les lettres font partie du numéro. Le contrôle de format ne vérifie pas l’identité.",
+      "input_type": "text",
+      "source": "form"
+    },
+    {
+      "key": "nom_declarant",
+      "label": "Nom du déclarant",
+      "arabic": "اسم ولقب المصرح",
+      "step": 2,
+      "required": true,
+      "max_length": 80,
+      "help": "La personne qui réalise cette déclaration.",
+      "where": "Sur la pièce d’identité de la personne qui effectue la démarche.",
+      "example": "Nom complet du déclarant",
+      "tip": "Si le représentant fait lui-même la déclaration, utilisez l’option de reprise de ses informations.",
+      "input_type": "text",
+      "source": "form"
+    },
+    {
+      "key": "identite_declarant",
+      "label": "N° d’identité du déclarant",
+      "arabic": "رقم بطاقة هوية المصرح",
+      "step": 2,
+      "required": true,
+      "max_length": 20,
+      "help": "Le numéro de la pièce d’identité de la personne déclarée ci-dessus.",
+      "where": "Sur la pièce d’identité du déclarant.",
+      "example": "Numéro exact de la pièce",
+      "tip": "Associez le nom et le numéro provenant de la même personne.",
+      "input_type": "text",
+      "source": "form"
+    },
+    {
+      "key": "email",
+      "label": "Adresse e-mail",
+      "arabic": "البريد الإلكتروني",
+      "step": 3,
+      "required": true,
+      "max_length": 70,
+      "help": "L’adresse de contact à reporter dans votre déclaration.",
+      "where": "Utilisez une messagerie que la personne chargée du suivi peut consulter.",
+      "example": "contact@votre-entreprise.tn",
+      "tip": "Vérifiez les caractères avant l’envoi. Aucun message n’est envoyé par cette application.",
+      "input_type": "email",
+      "source": "form"
+    },
+    {
+      "key": "gsm",
+      "label": "Téléphone de contact",
+      "arabic": "الهاتف الجوال",
+      "step": 3,
+      "required": true,
+      "max_length": 25,
+      "help": "Le numéro GSM de contact indiqué dans la déclaration.",
+      "where": "Utilisez le numéro de la personne chargée du suivi.",
+      "example": "+216 suivi de 8 chiffres",
+      "tip": "Vous pouvez saisir les 8 chiffres seuls ou ajouter +216. Le numéro n’est pas vérifié par SMS.",
+      "input_type": "tel",
+      "source": "form"
+    },
+    {
+      "key": "date",
+      "label": "Date de la déclaration",
+      "arabic": "التاريخ",
+      "step": 3,
+      "required": true,
+      "max_length": 10,
+      "help": "La date à reporter sur la déclaration, près de l’emplacement de signature.",
+      "where": "Choisissez la date correspondant à votre déclaration.",
+      "example": "",
+      "tip": "Cette date est distincte de celle d’une décision figurant dans vos pièces. Aucun délai légal n’est calculé ici.",
+      "input_type": "date",
+      "source": "form"
+    }
+  ]
+}

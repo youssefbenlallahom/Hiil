@@ -17,4 +17,4 @@ def azure_ready():
     return bool(BASE_URL and API_KEY and DEPLOYMENT)
 
 CREWAI_MODEL = os.getenv('CREWAI_MODEL', '').strip()
-
+DEMO_DATA = os.getenv('DOSSIER_DEMO_DATA', 'false').lower() == 'true'
