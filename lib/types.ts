@@ -7,71 +7,8 @@ export type Source = {id:string;title:string;url:string;type:string;text:string;
 export type Health = {ai_configured:boolean;ocr_configured:boolean;ocr_provider:string|null;mode:string;institutional_connection:boolean};
 export type Answer = {text:string;message?:string;mode:string;sources:Source[];references?:Source[]};
 
-export type AuditCheck = {
-  id: string;
-  label: string;
-  status: 'pass' | 'warning' | 'info' | 'fail';
-  detail: string;
-  category?: string;
-  recommendation?: string | null;
-  matricule?: string;
-};
-
-export type AuditSummaryItem = {
-  total_checks: number;
-  passed: number;
-  warnings: number;
-  failures?: number;
-};
-
-export type AuditResult = {
-  case_id: string;
-  company: string;
-  checks: AuditCheck[];
-  risk?: {
-    score?: number;
-    level?: string;
-    issues?: string[];
-    high_risk?: boolean;
-    high_risk_count?: number;
-  };
-  summary: AuditSummaryItem;
-  audited_at: string;
-};
-
-export type AnalyticsData = {
-  overview: {
-    total_cases: number;
-    submitted: number;
-    reviewed: number;
-    corrections: number;
-    in_progress: number;
-  };
-  documents: {
-    total: number;
-    analyzed: number;
-    fields_extracted: number;
-    confirmations: number;
-  };
-  f005: {
-    started: number;
-    completed: number;
-    ocr_imports?: number;
-  };
-  open_points: number;
-  impact: {
-    time_saved_pct: number;
-    baseline_minutes: number;
-    target_minutes: number;
-    points_resolved: number;
-  };
-  risk: {
-    high_risk_count: number;
-  };
-  institutional_connection: boolean;
-};
-
 export async function api<T>(url:string, options?:RequestInit):Promise<T> {
+
   const response = await fetch('/api'+url,{cache:'no-store',...options,headers:options?.body instanceof FormData ? options.headers : {'Content-Type':'application/json',...options?.headers}});
   if(!response.ok) {
     const body = await response.json().catch(()=>null);

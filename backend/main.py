@@ -19,18 +19,16 @@ from backend.rules import can_submit, checks
 from backend.sources import list_sources, refresh_sources
 from backend import form_routes
 from backend.form_routes import router as form_router
-from backend.analytics import router as analytics_router
+
 
 @asynccontextmanager
 async def lifespan(app):
-    if config.DEMO_DATA:
-        store.seed()
     await asyncio.to_thread(list_sources)
     yield
 
 app = FastAPI(title='Dossier TN', lifespan=lifespan)
 app.include_router(form_router)
-app.include_router(analytics_router)
+
 app.add_middleware(CORSMiddleware, allow_origins=os.getenv('DOSSIER_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(','), allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 MODEL_SLOTS = asyncio.Semaphore(2)
 

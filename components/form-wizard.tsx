@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
-import {ArrowDownToLine,ArrowLeft,ArrowRight,ArrowUpRight,BookOpen,Check,CheckCheck,ChevronDown,Eye,FileText,HelpCircle,LoaderCircle,ScanLine,Upload,X} from 'lucide-react';
+import {ArrowDownToLine,ArrowLeft,ArrowRight,ArrowUpRight,BookOpen,Check,CheckCheck,ChevronDown,ChevronRight,Eye,FileText,HelpCircle,LoaderCircle,ScanLine,Upload,X} from 'lucide-react';
 import {api,type Case,type Health} from '@/lib/types';
 import type {FormCatalog,FormField,OcrBatch,Provenance} from '@/lib/form-types';
 import {useFormDraft} from '@/lib/use-form-draft';
@@ -91,14 +91,14 @@ export default function FormWizard({c,health,onUpdate}:{c:Case;health:Health|nul
   }
   if(loading||!catalog)return error?<Message error>{error}</Message>:<Loading text="Ouverture de votre déclaration…"/>;
   return <>
-    <div className="breadcrumb"><Link href={'/dossiers/'+c.id}>{c.company}</Link><span>/</span><span>Déclaration de modification</span></div>
+    <div className="breadcrumb"><Link href="/dossiers">Mes démarches</Link><ChevronRight size={13}/><Link href={'/dossiers/'+c.id}>{c.company}</Link><ChevronRight size={13}/><span>Atelier RNE F005</span></div>
     <div className="form-topline"><div><span className="section-kicker">{catalog.version} · Personne morale</span><h1>Votre déclaration, <span className="serif-word">pas à pas.</span></h1></div><div className={'save-state '+status} role="status">{status==='saving'?<LoaderCircle className="spin" size={15}/>:status==='saved'?<CheckCheck size={16}/>:null}{status==='saved'?'Enregistré':status==='dirty'?'Saisie en cours':status==='saving'?'Enregistrement…':'À enregistrer'}</div></div>
     {error&&<Message error>{error}<button className="text-link" onClick={()=>void flush().catch(()=>{})}>Réessayer l’enregistrement</button></Message>}
     {notice&&<Message>{notice}</Message>}
     {locked&&<Message>Ce dossier est en revue. Vous pouvez consulter la déclaration et télécharger les documents.</Message>}
     {recovery&&<Message>Une saisie non enregistrée est disponible dans cet onglet.<button className="text-link" onClick={restore}>Restaurer</button><button className="text-link" onClick={discard}>Ignorer</button></Message>}
     <nav className="form-stepper" aria-label="Étapes de la déclaration">{steps.map((label,i)=><button key={label} onClick={()=>void go(i)} aria-current={draft.step===i?'step':undefined} className={draft.step===i?'active':''}><span>{i+1}</span>{label}</button>)}</nav>
-    <div className="form-grid"><main className="form-sheet" id="form-main">
+    <div className="form-grid"><section className="form-sheet" id="form-main">
       <div className="sheet-heading"><span className="section-kicker">Étape {draft.step+1} sur {steps.length}</span><h2 id="step-heading" tabIndex={-1}>{steps[draft.step]}</h2><p>{subtitles[draft.step]}</p></div>
       {draft.step===0&&<>
         <div className="filter-row"><label className="sr-only" htmlFor="mod-search">Rechercher une modification</label><input id="mod-search" type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Rechercher : adresse, dirigeant…"/><label className="sr-only" htmlFor="mod-group">Catégorie</label><select id="mod-group" value={group} onChange={e=>setGroup(e.target.value)}><option value="">Toutes les catégories</option>{Array.from(new Set(catalog.modifications.map(m=>m.group))).map(g=><option key={g}>{g}</option>)}</select></div>
@@ -126,7 +126,7 @@ export default function FormWizard({c,health,onUpdate}:{c:Case;health:Health|nul
         {draft.has_pdf&&<div className="download-panel"><CheckCheck size={25}/><h3>Votre déclaration est prête.</h3><p>Conservez le PDF et les pièces dans un même dossier.</p><a className="button primary" href={'/api'+base+'/pdf'}><ArrowDownToLine size={17}/>Télécharger le F005</a><a className="button secondary" href={'/api/cases/'+c.id+'/export'}><ArrowDownToLine size={17}/>Télécharger le dossier complet</a><Link className="text-link" href={'/dossiers/'+c.id+'/preparation'}>Préparer la revue <ArrowRight size={16}/></Link></div>}
       </>}
       <footer className="form-navigation">{draft.step>0?<button className="button quiet" onClick={()=>void go(draft.step-1)}><ArrowLeft size={16}/>Précédent</button>:<Link className="button quiet" href={'/dossiers/'+c.id}><ArrowLeft size={16}/>Dossier</Link>}{draft.step<4&&<button className="button primary" disabled={!!busy} onClick={()=>void go(draft.step+1,true)}>Continuer <ArrowRight size={16}/></button>}</footer>
-    </main><aside className="form-companion">
+    </section><aside className="form-companion">
       <div className="folio-note"><span className="section-kicker">Votre dossier</span><h3>{c.company}</h3><div className="completion-number">{completeCount}<span> / {requiredCount}</span></div><p>champs nécessaires renseignés et au format attendu</p><div className="completion-track"><span style={{width:requiredCount?(completeCount/requiredCount*100)+'%':'0%'}}/></div><div className="folio-detail"><span>Pièces réunies</span><strong>{c.documents.length}</strong></div><div className="folio-detail"><span>Modifications choisies</span><strong>{draft.modifications.length}</strong></div><button className="button secondary full" onClick={async()=>{await flush().catch(()=>{});preview.current?.showModal();}}><Eye size={16}/>Voir le formulaire</button></div>
       <div className="help-note"><BookOpen size={22}/><h3>Un repère à chaque étape.</h3><p>« Comprendre » explique chaque champ. Pour une question complémentaire, consultez l’aide avec ses références.</p><button className="text-link" onClick={()=>setAdvisor(true)}>Ouvrir l’aide <ArrowUpRight size={15}/></button></div>
     </aside></div>
