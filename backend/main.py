@@ -52,6 +52,7 @@ def editable(case):
 
 @app.get('/api/health')
 def health():
+    config.reload()
     return {'status': 'ok', 'ai_configured': config.azure_ready(), 'ocr_configured': bool(config.OCR_ENDPOINT and config.OCR_KEY),
             'ocr_provider': 'Azure Document Intelligence' if config.OCR_ENDPOINT and config.OCR_KEY else 'Azure Vision' if config.azure_ready() else 'OCR Windows' if os.name == 'nt' else None,
             'mode': 'local_workspace', 'institutional_connection': False}

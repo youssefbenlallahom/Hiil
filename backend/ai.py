@@ -4,7 +4,7 @@ import io
 import json
 import re
 import time
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 import httpx
 from openai import AsyncOpenAI
@@ -24,9 +24,27 @@ MAX_PAGES = 12
 def client():
     if not config.azure_ready():
         raise ValueError('Renseignez les trois variables Azure OpenAI dans .env, puis redémarrez le backend.')
-    if not config.BASE_URL.startswith('https://') or not config.BASE_URL.rstrip('/').endswith('/openai/v1'):
-        raise ValueError('AZURE_OPENAI_BASE_URL doit être une URL HTTPS terminée par /openai/v1/.')
-    return AsyncOpenAI(api_key=config.API_KEY, base_url=config.BASE_URL, timeout=90, max_retries=1)
+    raw_url = config.BASE_URL.strip()
+    if not raw_url.startswith('https://'):
+        raise ValueError('AZURE_OPENAI_BASE_URL doit être une URL HTTPS.')
+
+    parsed = urlparse(raw_url)
+    base_path = parsed.path.rstrip('/')
+    if base_path.endswith('/chat/completions'):
+        base_path = base_path[:-len('/chat/completions')]
+    clean_base_url = f"{parsed.scheme}://{parsed.netloc}{base_path}"
+
+    query_params = {k: v[0] for k, v in parse_qs(parsed.query).items()}
+    default_headers = {'api-key': config.API_KEY}
+
+    return AsyncOpenAI(
+        api_key=config.API_KEY,
+        base_url=clean_base_url,
+        default_headers=default_headers,
+        default_query=query_params if query_params else None,
+        timeout=90,
+        max_retries=1
+    )
 
 def read_pages(content, mime):
     if mime == 'application/pdf':
