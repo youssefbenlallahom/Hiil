@@ -57,6 +57,11 @@ export function useFormDraft(caseId:string){
     timer.current=setTimeout(()=>{timer.current=null;void save().catch(()=>{});},500);
   },[key,save]);
   useEffect(()=>{
+    const reset=()=>{dirty.current=false;active.current=false;if(timer.current){clearTimeout(timer.current);timer.current=null;}};
+    window.addEventListener('dossier-testing-reset',reset);
+    return()=>window.removeEventListener('dossier-testing-reset',reset);
+  },[]);
+  useEffect(()=>{
     const unload=(e:BeforeUnloadEvent)=>{if(dirty.current){e.preventDefault();e.returnValue='';}};
     const navigate=(e:MouseEvent)=>{
       const anchor=(e.target as HTMLElement).closest?.('a');

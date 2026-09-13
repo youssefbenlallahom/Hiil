@@ -1,43 +1,43 @@
 @import 'tailwindcss';
 
 /* ==========================================================================
-   DOSSIER TN — MODERN SAAS DESIGN SYSTEM (INDIGO / SAPPHIRE)
+   DOSSIER TN — UNIFIED GOVERNMENT WORKSPACE (CHARCOAL / GOLD)
    Harmonized with Form Studio RNE F005 Design Language
    ========================================================================== */
 
 :root {
-  --bg: #f8fafc;
-  --paper: #ffffff;
-  --ink: #0f172a;
-  --ink-secondary: #334155;
-  --muted: #64748b;
-  --faint: #94a3b8;
+  --bg: #101215;
+  --paper: #1b1d20;
+  --ink: #eeeae0;
+  --ink-secondary: #d0cabe;
+  --muted: #aaa69b;
+  --faint: #938f85;
 
-  --primary: #4338ca;
-  --primary-hover: #3730a3;
-  --primary-soft: #eef2ff;
-  --primary-border: #c7d2fe;
+  --primary: #e3c16e;
+  --primary-hover: #efd591;
+  --primary-soft: #302b20;
+  --primary-border: #665735;
   --primary-ring: rgba(67, 56, 202, 0.18);
 
-  --line: #e2e8f0;
-  --line-subtle: #f1f5f9;
+  --line: #38372f;
+  --line-subtle: #222426;
 
-  --emerald: #059669;
-  --emerald-hover: #047857;
-  --emerald-soft: #ecfdf5;
-  --emerald-border: #a7f3d0;
+  --emerald: #a4ddc6;
+  --emerald-hover: #bdebd9;
+  --emerald-soft: #1d3028;
+  --emerald-border: #395d4c;
 
-  --amber: #d97706;
-  --amber-bg: #fffbeb;
-  --amber-border: #fde68a;
+  --amber: #e4bd80;
+  --amber-bg: #30271e;
+  --amber-border: #6c5433;
 
-  --red: #e11d48;
-  --red-soft: #fff1f2;
-  --red-border: #fecdd3;
+  --red: #efaa9a;
+  --red-soft: #34221e;
+  --red-border: #74483a;
 
-  --cyan: #0891b2;
-  --cyan-soft: #ecfeff;
-  --cyan-border: #a5f3fc;
+  --cyan: #a6d4d6;
+  --cyan-soft: #1c2e30;
+  --cyan-border: #36585c;
 
   --display: 'Plus Jakarta Sans Variable', 'Manrope Variable', sans-serif;
   --body: 'DM Sans Variable', sans-serif;
@@ -141,7 +141,7 @@ svg {
 }
 
 ::selection {
-  background: #c7d2fe;
+  background: #665735;
 }
 
 /* ── App Shell Structure ── */
@@ -155,7 +155,7 @@ svg {
   width: 240px;
   position: fixed;
   inset: 0 auto 0 0;
-  background: #fff;
+  background: #1b1d20;
   border-right: 1px solid var(--line);
   padding: 24px 16px 20px;
   display: flex;
@@ -177,10 +177,10 @@ svg {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--primary), #6366f1);
+  background: linear-gradient(135deg, var(--primary), #cdb170);
   width: 38px;
   height: 38px;
-  color: #fff;
+  color: #eeeae0;
   border-radius: 10px;
   box-shadow: 0 3px 8px rgba(67, 56, 202, 0.25);
 }
@@ -264,15 +264,15 @@ svg {
 .agency-switch {
   margin: 20px 4px 20px;
   padding: 16px 14px;
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  background: linear-gradient(135deg, #26241d 0%, #3a3222 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
-  color: #fff;
+  color: #eeeae0;
   box-shadow: var(--shadow-sm);
 }
 
 .agency-switch > svg {
-  color: #a5b4fc;
+  color: #d5bd84;
   margin-bottom: 10px;
 }
 
@@ -280,13 +280,13 @@ svg {
   display: block;
   font-size: 0.82rem;
   font-weight: 750;
-  color: #fff;
+  color: #eeeae0;
   margin-bottom: 4px;
 }
 
 .agency-switch p {
   font-size: 0.72rem;
-  color: #c7d2fe;
+  color: #665735;
   line-height: 1.45;
   margin-bottom: 12px;
 }
@@ -297,12 +297,12 @@ svg {
   gap: 6px;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #a5b4fc;
+  color: #d5bd84;
   transition: all 0.15s ease;
 }
 
 .agency-switch a:hover {
-  color: #fff;
+  color: #eeeae0;
   gap: 8px;
 }
 
@@ -355,7 +355,7 @@ svg {
 
 .topbar {
   height: 72px;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(21, 23, 26, 0.96);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
@@ -484,7 +484,7 @@ main {
 
 .btn.primary {
   background: var(--primary);
-  color: #fff;
+  color: #eeeae0;
   box-shadow: 0 4px 12px rgba(67, 56, 202, 0.25);
 }
 
@@ -496,7 +496,7 @@ main {
 
 .btn.secondary {
   border-color: var(--line);
-  background: #fff;
+  background: #1b1d20;
   color: var(--ink-secondary);
   box-shadow: var(--shadow-xs);
 }
@@ -508,12 +508,12 @@ main {
 
 .btn.amber-btn {
   background: var(--amber);
-  color: #fff;
+  color: #eeeae0;
   box-shadow: 0 4px 10px rgba(217, 119, 6, 0.25);
 }
 
 .btn.amber-btn:hover:not(:disabled) {
-  background: #b45309;
+  background: #c7a66d;
 }
 
 .btn.small {
@@ -545,8 +545,8 @@ main {
 
 /* ── Centralized Hero Card for RNE F005 ── */
 .workflow-hero-card {
-  background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 60%, #4338ca 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #26241d 0%, #efd591 60%, #e3c16e 100%);
+  color: #eeeae0;
   border-radius: var(--radius-lg);
   padding: 26px 28px;
   display: flex;
@@ -576,7 +576,7 @@ main {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #a5b4fc;
+  color: #d5bd84;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -592,26 +592,26 @@ main {
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 1px;
-  color: #a5b4fc;
+  color: #d5bd84;
   margin-bottom: 4px;
 }
 
 .workflow-hero-content h3 {
   font-size: 1.25rem;
   font-weight: 800;
-  color: #fff;
+  color: #eeeae0;
   margin: 0 0 4px;
 }
 
 .workflow-hero-content p {
   font-size: 0.84rem;
-  color: #c7d2fe;
+  color: #665735;
   line-height: 1.5;
   margin: 0;
 }
 
 .workflow-hero-card .hero-cta {
-  background: #fff !important;
+  background: #1b1d20 !important;
   color: var(--primary) !important;
   font-weight: 800;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
@@ -619,7 +619,7 @@ main {
 }
 
 .workflow-hero-card .hero-cta:hover {
-  background: #f8fafc !important;
+  background: #101215 !important;
   transform: translateY(-2px);
 }
 
@@ -644,7 +644,7 @@ main {
 
 .metrics > div {
   padding: 18px 20px;
-  background: #fff;
+  background: #1b1d20;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-xs);
@@ -679,7 +679,7 @@ main {
 
 /* ── Panels & Cards ── */
 .panel {
-  background: #fff;
+  background: #1b1d20;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   min-width: 0;
@@ -790,7 +790,7 @@ main {
   align-items: center;
   justify-content: center;
   border: 1.5px solid var(--line);
-  background: #fff;
+  background: #1b1d20;
   border-radius: 50%;
   font-size: 0.72rem;
   font-weight: 750;
@@ -805,7 +805,7 @@ main {
 .step.current .step-num {
   background: var(--primary);
   border-color: var(--primary);
-  color: #fff;
+  color: #eeeae0;
   box-shadow: 0 0 0 4px var(--primary-ring);
 }
 
@@ -832,7 +832,7 @@ main {
 
 /* ── Callout Banners ── */
 .action-callout {
-  background: #fff;
+  background: #1b1d20;
   border: 1.5px solid var(--line);
   border-radius: var(--radius-md);
   padding: 18px 20px;
@@ -872,7 +872,7 @@ main {
 }
 
 .action-callout.calm {
-  background: #f8fafc;
+  background: #101215;
   border-color: var(--line);
 }
 
@@ -971,7 +971,7 @@ main {
 
 /* Company Card */
 .company-card {
-  background: #f8fafc;
+  background: #101215;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 18px;
@@ -1023,7 +1023,7 @@ main {
   gap: 16px;
   padding: 18px 22px;
   margin-top: 20px;
-  background: #fff;
+  background: #1b1d20;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-xs);
@@ -1113,7 +1113,7 @@ main {
 
 .assistant-intro {
   padding: 14px;
-  background: #f8fafc;
+  background: #101215;
   border-radius: var(--radius-sm);
   margin-bottom: 20px;
   border: 1px solid var(--line-subtle);
@@ -1144,7 +1144,7 @@ main {
   min-height: 42px;
   width: 100%;
   border: 1px solid var(--line);
-  background: #fff;
+  background: #1b1d20;
   border-radius: var(--radius-sm);
   margin-bottom: 8px;
   font-size: 0.76rem;
@@ -1176,7 +1176,7 @@ main {
   border-radius: var(--radius-sm);
   align-items: center;
   padding: 4px 6px 4px 12px;
-  background: #fff;
+  background: #1b1d20;
 }
 
 .assistant-footer form:focus-within {
@@ -1301,7 +1301,7 @@ main {
 .evidence-viewer {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: #fff;
+  background: #1b1d20;
   overflow: hidden;
   box-shadow: var(--shadow-xs);
 }
@@ -1310,7 +1310,7 @@ main {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #f8fafc;
+  background: #101215;
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
   color: var(--muted);
@@ -1325,7 +1325,7 @@ main {
 
 .paper {
   margin: 14px;
-  background: #fff;
+  background: #1b1d20;
   min-height: 320px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -1365,8 +1365,8 @@ main {
 }
 
 .paper mark {
-  background: #fef3c7;
-  color: #92400e;
+  background: #342c20;
+  color: #dfba86;
   font-size: 0.95rem;
   font-weight: 750;
   padding: 4px 8px;
@@ -1435,7 +1435,7 @@ main {
 
 .choice.chosen .radio-circle {
   border: 5px solid var(--primary);
-  background: #fff;
+  background: #1b1d20;
 }
 
 .form-label {
@@ -1453,7 +1453,7 @@ main {
 .form-label textarea {
   width: 100%;
   border: 1.5px solid var(--line);
-  background: #fff;
+  background: #1b1d20;
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   font-size: 0.85rem;
@@ -1511,7 +1511,7 @@ main {
 
 .upload-zone:hover {
   border-color: var(--primary);
-  background: #e0e7ff;
+  background: #d1b574;
 }
 
 .upload-zone > svg {
@@ -1583,7 +1583,7 @@ main {
 .soft-note {
   font-size: 0.76rem;
   line-height: 1.6;
-  background: #f8fafc;
+  background: #101215;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
@@ -1730,7 +1730,7 @@ main {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: #f8fafc;
+  background: #101215;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 16px;
@@ -1766,7 +1766,7 @@ main {
   padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: #1b1d20;
   display: flex;
   gap: 12px;
   margin-bottom: 10px;
@@ -1855,7 +1855,7 @@ main {
 
 .timeline-icon.latest {
   background: var(--primary);
-  color: #fff;
+  color: #eeeae0;
 }
 
 .timeline-item strong {
@@ -1884,7 +1884,7 @@ main {
   border-radius: var(--radius-sm);
   padding: 8px 12px;
   color: var(--muted);
-  background: #fff;
+  background: #1b1d20;
 }
 
 .search-input input {
@@ -1906,7 +1906,7 @@ main {
 }
 
 .case-list-row:hover {
-  background: #f8fafc;
+  background: #101215;
 }
 
 .case-list-icon {
@@ -1941,7 +1941,7 @@ main {
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  background: #fff;
+  background: #1b1d20;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 22px 24px;
@@ -2016,7 +2016,7 @@ main {
   border: 0;
   border-radius: var(--radius-lg);
   width: min(500px, calc(100vw - 32px));
-  background: #fff;
+  background: #1b1d20;
   color: var(--ink);
   box-shadow: var(--shadow-lg);
   max-height: 90vh;
@@ -2058,7 +2058,7 @@ main {
 }
 
 .document-text {
-  background: #f8fafc;
+  background: #101215;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 20px;
@@ -2077,7 +2077,7 @@ main {
   transform: translateX(-50%);
   z-index: 100;
   background: var(--ink);
-  color: #fff;
+  color: #eeeae0;
   border-radius: var(--radius-sm);
   padding: 14px 20px;
   box-shadow: var(--shadow-lg);
@@ -2139,7 +2139,7 @@ main {
   height: 3px;
 }
 
-.impact-card.indigo::before { background: linear-gradient(90deg, var(--primary), #6366f1); }
+.impact-card.indigo::before { background: linear-gradient(90deg, var(--primary), #cdb170); }
 .impact-card.emerald::before { background: linear-gradient(90deg, var(--emerald), #34d399); }
 .impact-card.amber::before { background: linear-gradient(90deg, var(--amber), #fbbf24); }
 .impact-card.cyan::before { background: linear-gradient(90deg, var(--cyan), #22d3ee); }
@@ -2501,7 +2501,7 @@ main {
 
 /* ── DGI Concordance Card ── */
 .dgi-card {
-  background: linear-gradient(135deg, #1e1b4b, #312e81);
+  background: linear-gradient(135deg, #26241d, #3a3222);
   border-radius: var(--radius-lg);
   padding: 24px 28px;
   color: white;

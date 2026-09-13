@@ -224,12 +224,20 @@ async def analyze_upload(case_id, content, mime, name, kind, document_id=None):
         require_editable(case_id)
         case = store.get(case_id)
         doc = next(d for d in case['documents'] if d['id'] == document_id)
+        previous_facts = list(doc['fields'])
         doc.update(pages=result['pages'], text='\n\n'.join(p['text'] for p in result['pages']), method=result['method'],
-                   status='extracted' if result['candidates'] else 'needs_review', kind=kind,
+                   status='extracted' if result['candidates'] or result.get('facts') else 'needs_review', kind=kind,
                    form_candidates=result['candidates'], warnings=result['warnings'], duration_ms=result['duration_ms'])
         mapping = {'identifiant_unique': 'company_id', 'representant_legal': 'representative'}
-        preserved = [f for f in doc['fields'] if f['key'] not in mapping.values()]
+        fact_keys = {f['key'] for f in result.get('facts', [])}
+        preserved = [f for f in doc['fields'] if f['key'] not in mapping.values() and f['key'] not in fact_keys]
         doc['fields'] = preserved + [{**f, 'key': mapping[f['key']]} for f in result['candidates'] if f['key'] in mapping]
+        doc['fields'].extend(result.get('facts', []))
+        for key in list(case['confirmations']):
+            before = sorted(f['value'] for f in previous_facts if f['key'] == key)
+            after = sorted(f['value'] for f in doc['fields'] if f['key'] == key)
+            if before != after:
+                del case['confirmations'][key]
         store.event(case, 'Lecture de la pièce terminée', detail=f"{name} · {len(result['candidates'])} suggestion(s)")
         store.save(case)
         draft = load(case_id)

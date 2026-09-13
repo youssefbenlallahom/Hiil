@@ -10,7 +10,8 @@ def no_live_providers(monkeypatch):
     monkeypatch.setattr(config, 'DEPLOYMENT', '')
     monkeypatch.setattr(config, 'OCR_KEY', '')
     monkeypatch.setattr(config, 'OCR_ENDPOINT', '')
-    monkeypatch.setattr(config, 'DEMO_DATA', True)
+    monkeypatch.setattr(config, 'DEMO_DATA', True, raising=False)
+    monkeypatch.setattr(config, 'azure_ready', lambda: False)
     monkeypatch.delenv('CREWAI_MODEL', raising=False)
 
 

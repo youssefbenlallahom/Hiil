@@ -23,8 +23,10 @@ class Confirmation(BaseModel):
     value: str = Field(min_length=1, max_length=500)
 
 class Review(BaseModel):
-    action: Literal['request_correction', 'reviewed']
+    action: Literal['request_correction', 'reviewed', 'flag']
     note: str = Field(default='', max_length=2000)
+    expected_updated_at: str | None = None
+    checklist: list[Literal['identity', 'documents', 'declaration']] = Field(default_factory=list)
 
 class Question(BaseModel):
     question: str = Field(min_length=1, max_length=2000)

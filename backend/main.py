@@ -19,15 +19,21 @@ from backend.rules import can_submit, checks
 from backend.sources import list_sources, refresh_sources
 from backend import form_routes
 from backend.form_routes import router as form_router
+from backend.journey import router as journey_router
+from backend.testing_reset import router as testing_router, reset_guard
 
 
 @asynccontextmanager
 async def lifespan(app):
     await asyncio.to_thread(list_sources)
+    await asyncio.to_thread(store.seed)
     yield
 
 app = FastAPI(title='Dossier TN', lifespan=lifespan)
 app.include_router(form_router)
+app.include_router(journey_router)
+app.include_router(testing_router)
+app.middleware('http')(reset_guard)
 
 app.add_middleware(CORSMiddleware, allow_origins=os.getenv('DOSSIER_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(','), allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 MODEL_SLOTS = asyncio.Semaphore(2)
@@ -197,6 +203,8 @@ def submit(case_id: str):
         if not can_submit(case):
             raise HTTPException(409, 'Analysez les pièces et confirmez les écarts avant de transmettre à la revue.')
         case['status'] = 'submitted'
+        case['submitted_at'] = store.now()
+        case['flagged'] = False
         store.event(case, 'Dossier transmis à la revue', detail='Revue locale du prototype. Aucun dépôt auprès du RNE.')
         store.save(case)
     return public(case)
@@ -207,10 +215,24 @@ def review(case_id: str, body: Review):
         case = required(case_id)
         if case['status'] != 'submitted':
             raise HTTPException(409, 'Ce dossier n’est pas en attente de revue.')
-        if body.action == 'request_correction' and not body.note.strip():
-            raise HTTPException(422, 'Précisez la correction à demander.')
-        case['status'] = 'correction_requested' if body.action == 'request_correction' else 'reviewed'
-        store.event(case, 'Correction demandée' if body.action == 'request_correction' else 'Revue terminée', 'Agent (simulation)', body.note.strip())
+        if body.expected_updated_at and body.expected_updated_at != case['updated_at']:
+            raise HTTPException(409, 'Le dossier a changé. Actualisez-le avant de décider.')
+        if not body.note.strip():
+            raise HTTPException(422, 'Ajoutez une observation pour justifier cette action.')
+        if body.action == 'reviewed' and form_routes.load(case_id)['revision'] > 0:
+            if set(body.checklist) != {'identity', 'documents', 'declaration'}:
+                raise HTTPException(422, 'Confirmez les trois points de contrôle avant de terminer la revue.')
+            if not can_submit(case):
+                raise HTTPException(409, 'Le dossier doit être complet et son PDF à jour avant validation.')
+        if body.action == 'flag':
+            case['flagged'] = True
+        else:
+            case['status'] = 'correction_requested' if body.action == 'request_correction' else 'reviewed'
+            case['flagged'] = False
+        case['last_review'] = {'action': body.action, 'note': body.note.strip(),
+                              'checklist': body.checklist, 'at': store.now()}
+        labels = {'request_correction': 'Correction demandée', 'reviewed': 'Revue terminée', 'flag': 'Dossier signalé'}
+        store.event(case, labels[body.action], 'Agent (simulation)', body.note.strip())
         store.save(case)
     return public(case)
 

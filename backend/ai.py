@@ -147,8 +147,8 @@ def save_advisor_history(case_id, messages):
         db.execute('INSERT OR REPLACE INTO advisor_history VALUES (?,?)', (case_id, json.dumps(messages[-20:], ensure_ascii=False)))
 
 
-async def answer(question, case, draft=None, field=None):
-    history = advisor_history(case['id'])
+async def answer(question, case, draft=None, field=None, use_history=True):
+    history = advisor_history(case['id']) if use_history else []
     # Include the preceding question for short follow-ups, without indexing generated answers as evidence.
     previous = next((m['content'] for m in reversed(history) if m['role'] == 'user'), '')
     sources = await asyncio.to_thread(retrieve, question + (' ' + previous if len(question.split()) < 9 else ''))
@@ -157,6 +157,19 @@ async def answer(question, case, draft=None, field=None):
         return {'text': demo_text, 'message': demo_text,
                 'source_ids': [], 'sources': [], 'references': sources, 'mode': 'demo'}
     context_sources = list(sources)
+    if draft:
+        from backend.form_catalog import FIELD_MAP, MOD_MAP
+        from backend.rules import checks
+        state = checks(case)
+        snapshot = ['État local du dossier : ' + case['status'],
+                    'Modifications déclarées : ' + ', '.join(MOD_MAP[k]['label'] for k in draft.get('modifications', []) if k in MOD_MAP),
+                    'PDF préparé : ' + ('oui, non signé' if draft.get('has_pdf') else 'non'),
+                    'Écarts non confirmés : ' + str(state['open_count']),
+                    'Documents à analyser : ' + str(len(state['pending_documents']))]
+        snapshot.extend(FIELD_MAP[k]['label'] + ' (déclaration utilisateur) : ' + v for k,v in draft.get('fields', {}).items() if k in FIELD_MAP and v)
+        snapshot.extend('À compléter ou corriger : ' + FIELD_MAP.get(k, {'label': k})['label'] + ' — ' + v for k,v in draft.get('errors', {}).items())
+        context_sources.append({'id': 'dossier-state', 'title': 'État actuel du dossier (déclaratif)',
+            'url': '/dossiers/' + case['id'] + '/conversation', 'text': '\n'.join(snapshot), 'type': 'État local, pas une source juridique'})
     for document in case['documents']:
         if document.get('sample'):
             continue
@@ -187,7 +200,8 @@ Ne déduis jamais de délais, de listes obligatoires, de frais, de validation RN
         return {'text': '', 'message': 'La réponse proposée ne dispose pas de citations vérifiables. Elle n’a pas été affichée.',
                 'source_ids': [], 'sources': [], 'references': sources, 'mode': 'insufficient_evidence'}
     citations = [{**by_id[c.source_id], 'quote': c.quote} for c in parsed.citations]
-    save_advisor_history(case['id'], history + [{'role': 'user', 'content': question}, {'role': 'assistant', 'content': parsed.text}])
+    if use_history:
+        save_advisor_history(case['id'], history + [{'role': 'user', 'content': question}, {'role': 'assistant', 'content': parsed.text}])
     return {'text': parsed.text, 'source_ids': [c['id'] for c in citations], 'sources': citations, 'references': [], 'mode': 'azure'}
 
 

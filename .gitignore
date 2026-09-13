@@ -90,6 +90,7 @@ htmlcov/
 # Application Local Storage & Databases
 # ==========================================
 .local-data/
+.test-data-backups/
 *.sqlite
 *.sqlite3
 *.db
